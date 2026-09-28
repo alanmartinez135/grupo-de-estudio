@@ -7,14 +7,20 @@ import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/store/useAppStore";
+import { MAX_GROUP_MEMBERS } from "@/data/mockData";
 
 export default function GroupDetailScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const group = useAppStore((s) => s.groups.find((g) => g.id === groupId));
   const users = useAppStore((s) => s.users);
-  const weeklyTests = useAppStore((s) => s.weeklyTests.filter((t) => t.groupId === groupId));
+  const authUser = useAppStore((s) => s.authUser);
+  const joinGroupById = useAppStore((s) => s.joinGroupById);
+  const leaveGroup = useAppStore((s) => s.leaveGroup);
+  const allWeeklyTests = useAppStore((s) => s.weeklyTests);
+  const weeklyTests = allWeeklyTests.filter((t) => t.groupId === groupId);
   const [tab, setTab] = useState<"members" | "tests">("members");
   const [copied, setCopied] = useState(false);
+  const [joinError, setJoinError] = useState("");
 
   if (!group) {
     return (
@@ -34,17 +40,39 @@ export default function GroupDetailScreen() {
     setTimeout(() => setCopied(false), 1500);
   }
 
+  function handleJoin() {
+    const result = joinGroupById(group!.id);
+    setJoinError(result.ok ? "" : result.message);
+  }
+
+  function handleLeave() {
+    leaveGroup(group!.id);
+    router.replace("/(student)/groups");
+  }
+
   const members = users.filter((u) => group.memberIds.includes(u.id));
+  const isMember = group.memberIds.includes(authUser?.id ?? "");
 
   return (
     <Screen scroll={false}>
       <Card className="mb-4">
         <Text className="text-xl font-bold text-ink-light dark:text-ink-dark mb-1">{group.name}</Text>
         <Text className="text-ink-muted dark:text-ink-mutedDark mb-3">{group.description}</Text>
-        <Pressable onPress={copyCode} className="self-start flex-row items-center gap-2 bg-navy-50 dark:bg-navy-800 rounded-full px-4 py-2">
-          <Text className="font-semibold text-navy-700 dark:text-gold-500">{group.code}</Text>
-          <Text className="text-navy-700 dark:text-gold-500 text-xs">{copied ? "¡Copiado!" : "Copiar"}</Text>
-        </Pressable>
+        <View className="flex-row items-center justify-between">
+          <Pressable onPress={copyCode} className="flex-row items-center gap-2 bg-navy-50 dark:bg-navy-800 rounded-full px-4 py-2">
+            <Text className="font-semibold text-navy-700 dark:text-gold-500">{group.code}</Text>
+            <Text className="text-navy-700 dark:text-gold-500 text-xs">{copied ? "¡Copiado!" : "Copiar"}</Text>
+          </Pressable>
+          <Text className="text-xs text-ink-muted dark:text-ink-mutedDark">{group.memberIds.length}/{MAX_GROUP_MEMBERS} integrantes</Text>
+        </View>
+        <View className="mt-4">
+          {isMember ? (
+            <Button label="Abandonar grupo" variant="outline" onPress={handleLeave} fullWidth />
+          ) : (
+            <Button label="Unirme al grupo" onPress={handleJoin} fullWidth />
+          )}
+          {joinError ? <Text className="mt-1 text-xs text-red-500">{joinError}</Text> : null}
+        </View>
       </Card>
 
       <View className="flex-row rounded-full bg-navy-50 dark:bg-navy-800 p-1 mb-4">

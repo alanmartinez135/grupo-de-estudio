@@ -79,6 +79,7 @@ export interface Friend {
 }
 
 export const CURRENT_USER_ID = "u-1";
+export const MAX_GROUP_MEMBERS = 6;
 
 export const mockUsers: MockUser[] = [
   { id: "u-1", correo: "javiera.acuna@duocuc.cl", password: "duoc2024", name: "Javiera Acuña", career: "Desarrollo de Software", jornada: "diurna", englishLevel: "B1", role: "student", avatarColor: "#0B2A4A" },

@@ -1,4 +1,7 @@
 import { create } from "zustand";
+import { EnglishLevel, Jornada } from "@grupo-estudio/types";
+import { MAX_GROUP_MEMBERS } from "@/data/mockData";
+
 import {
   AdminTestDefinition,
   ChatMessage,
@@ -24,7 +27,14 @@ interface AppState {
   authUser: MockUser | null;
   users: MockUser[];
   login: (correo: string, password: string) => { ok: boolean; message: string };
-  register: (correo: string, password: string) => { ok: boolean; message: string };
+  register: (data: {
+    correo: string;
+    password: string;
+    name: string;
+    career: string;
+    jornada: Jornada;
+    englishLevel: EnglishLevel;
+  }) => { ok: boolean; message: string };
   logout: () => void;
   deleteAccount: () => void;
   resetRequested: string | null;
@@ -48,9 +58,12 @@ interface AppState {
 
   // --- grupos de estudio ---
   groups: StudyGroupUI[];
-  createGroup: (name: string, description: string) => StudyGroupUI;
+  createGroup: (name: string, description: string, level: EnglishLevel) => StudyGroupUI;
   joinGroup: (code: string) => { ok: boolean; message: string };
+  joinGroupById: (groupId: string) => { ok: boolean; message: string };
+  leaveGroup: (groupId: string) => void;
 
+  
   // --- tests semanales ---
   weeklyTests: WeeklyTest[];
   completeWeeklyTest: (testId: string) => void;
@@ -79,7 +92,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ authUser: found, activeRole: found.role });
     return { ok: true, message: "Bienvenido/a de vuelta." };
   },
-  register: (correo, password) => {
+  register: ({ correo, password, name, career, jornada, englishLevel }) => {
     if (!correo.toLowerCase().endsWith("@duocuc.cl")) {
       return { ok: false, message: "Usa tu correo institucional (@duocuc.cl)." };
     }
@@ -90,10 +103,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       id: `u-${Date.now()}`,
       correo,
       password,
-      name: correo.split("@")[0].replace(".", " "),
-      career: "Por definir",
-      jornada: "diurna",
-      englishLevel: "A1",
+      name: name.trim(),
+      career: career.trim(),
+      jornada,
+      englishLevel,
       role: "student",
       avatarColor: "#2E5B8A",
     };
@@ -135,13 +148,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   submitDiagnosticTest: () => set({ diagnosticCompleted: true }),
 
   groups: mockGroups,
-  createGroup: (name, description) => {
+  createGroup: (name, description, level) => {
     const newGroup: StudyGroupUI = {
       id: `g-${Date.now()}`,
       name,
       description,
       code: `DUOC-${Math.floor(1000 + Math.random() * 9000)}`,
-      level: get().authUser?.englishLevel ?? "A1",
+      level,
       createdBy: get().authUser?.id ?? CURRENT_USER_ID,
       memberIds: [get().authUser?.id ?? CURRENT_USER_ID],
     };
@@ -151,12 +164,26 @@ export const useAppStore = create<AppState>((set, get) => ({
   joinGroup: (code) => {
     const group = get().groups.find((g) => g.code.toLowerCase() === code.trim().toLowerCase());
     if (!group) return { ok: false, message: "No existe un grupo con ese código." };
+    return get().joinGroupById(group.id);
+  },
+  joinGroupById: (groupId) => {
+    const group = get().groups.find((g) => g.id === groupId);
+    if (!group) return { ok: false, message: "El grupo no existe." };
     const userId = get().authUser?.id ?? CURRENT_USER_ID;
     if (group.memberIds.includes(userId)) return { ok: false, message: "Ya perteneces a este grupo." };
+    if (group.memberIds.length >= MAX_GROUP_MEMBERS) return { ok: false, message: "El grupo está lleno." };
     set((s) => ({
       groups: s.groups.map((g) => (g.id === group.id ? { ...g, memberIds: [...g.memberIds, userId] } : g)),
     }));
     return { ok: true, message: `Te uniste a ${group.name}.` };
+  },
+  leaveGroup: (groupId) => {
+    const userId = get().authUser?.id ?? CURRENT_USER_ID;
+    set((s) => ({
+      groups: s.groups
+        .map((g) => (g.id === groupId ? { ...g, memberIds: g.memberIds.filter((id) => id !== userId) } : g))
+        .filter((g) => g.memberIds.length > 0),
+    }));
   },
 
   weeklyTests: mockWeeklyTests,
