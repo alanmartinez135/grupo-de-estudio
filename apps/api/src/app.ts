@@ -8,6 +8,7 @@ import { errorHandler } from "./errors";
 import { authRoutes } from "./auth/routes";
 import { userRoutes } from "./users/routes";
 import { groupRoutes } from "./groups/routes";
+import { evaluationRoutes } from "./evaluations/routes";
 
 export async function buildApp({ config, db }: { config: Config; db: Db }) {
   const app = Fastify({
@@ -41,6 +42,7 @@ export async function buildApp({ config, db }: { config: Config; db: Db }) {
   await app.register(authRoutes, { prefix: "/api/v1", db, config });
   await app.register(userRoutes, { prefix: "/api/v1", db });
   await app.register(groupRoutes, { prefix: "/api/v1", db });
+  await app.register(evaluationRoutes, { prefix: "/api/v1", db });
 
   return app;
 }

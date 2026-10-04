@@ -1,7 +1,8 @@
 -- Modelo de datos de Grupo de Estudio Duoc UC (PostgreSQL 16).
 -- Es idempotente: se puede ejecutar varias veces (pnpm --filter api db:migrate).
--- Incremento 1 (Sprint 5): usuarios, grupos de estudio e integrantes.
--- Evaluaciones, resultados y mensajes se agregan en los incrementos siguientes.
+-- Sprint 5: usuarios, grupos de estudio e integrantes.
+-- Sprint 6: evaluaciones (diagnóstica y semanales), preguntas y resultados.
+-- Los mensajes del chat se agregan en un incremento siguiente.
 
 DO $$ BEGIN
   CREATE TYPE rol AS ENUM ('student', 'admin');
@@ -46,3 +47,53 @@ CREATE TABLE IF NOT EXISTS grupo_integrantes (
 );
 
 CREATE INDEX IF NOT EXISTS grupo_integrantes_usuario_idx ON grupo_integrantes (usuario_id);
+
+-- ---------------------------------------------------------------- evaluaciones (Sprint 6)
+
+DO $$ BEGIN
+  CREATE TYPE habilidad AS ENUM ('reading', 'writing');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE tipo_evaluacion AS ENUM ('diagnostica', 'semanal');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+CREATE TABLE IF NOT EXISTS evaluaciones (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tipo          tipo_evaluacion NOT NULL,
+  titulo        text NOT NULL,
+  habilidad     habilidad,                  -- solo tests semanales
+  nivel         nivel_ingles,               -- solo tests semanales: lo ven los grupos de ese nivel
+  fecha_limite  date,
+  publicada     boolean NOT NULL DEFAULT true,
+  creado_en     timestamptz NOT NULL DEFAULT now(),
+  CHECK (tipo = 'diagnostica' OR (habilidad IS NOT NULL AND nivel IS NOT NULL))
+);
+
+CREATE TABLE IF NOT EXISTS preguntas (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  evaluacion_id    uuid NOT NULL REFERENCES evaluaciones(id) ON DELETE CASCADE,
+  orden            int NOT NULL,
+  habilidad        habilidad NOT NULL,
+  competencia      text NOT NULL,           -- Vocabulario, Comprensión lectora, Gramática, Conectores
+  enunciado        text NOT NULL,
+  opciones         text[] NOT NULL CHECK (array_length(opciones, 1) BETWEEN 2 AND 6),
+  indice_correcto  int NOT NULL CHECK (indice_correcto >= 0 AND indice_correcto < array_length(opciones, 1)),
+  UNIQUE (evaluacion_id, orden)
+);
+
+-- Un resultado por estudiante y evaluación. La calificación la calcula el servidor (H5).
+CREATE TABLE IF NOT EXISTS resultados (
+  evaluacion_id  uuid NOT NULL REFERENCES evaluaciones(id) ON DELETE CASCADE,
+  usuario_id     uuid NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  respuestas     jsonb NOT NULL,            -- id de pregunta -> índice elegido
+  correctas      int NOT NULL,
+  total          int NOT NULL,
+  puntaje        int NOT NULL CHECK (puntaje BETWEEN 0 AND 100),
+  detalle        jsonb,                     -- resultado completo del diagnóstico
+  rendido_en     timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (evaluacion_id, usuario_id)
+);
+
+CREATE INDEX IF NOT EXISTS evaluaciones_semanal_nivel_idx ON evaluaciones (nivel) WHERE tipo = 'semanal';
+CREATE INDEX IF NOT EXISTS resultados_usuario_idx ON resultados (usuario_id);

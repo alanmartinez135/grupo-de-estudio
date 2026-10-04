@@ -194,6 +194,12 @@ Todas las rutas usan el prefijo `/api/v1`. Los errores responden siempre con `{ 
 | POST   | `/grupos/unirse`  | Con sesión    | Unirse con el código de invitación                   |
 | POST   | `/grupos/:id/integrantes` | Con sesión | Unirse desde el listado (máximo 6 integrantes)   |
 | DELETE | `/grupos/:id/integrantes/me` | Con sesión | Abandonar el grupo; si queda vacío, se elimina |
+| GET    | `/diagnostico`    | Con sesión    | Preguntas de la evaluación diagnóstica (sin respuestas correctas) |
+| POST   | `/diagnostico/respuestas` | Con sesión | Califica en el servidor, guarda el resultado y asigna el nivel A1–C2 |
+| GET    | `/diagnostico/resultado`  | Con sesión | Resultado del diagnóstico del estudiante          |
+| GET    | `/tests`          | Con sesión    | Tests semanales del nivel de mis grupos, con su estado |
+| GET    | `/tests/:id`      | Con sesión    | Test con sus preguntas (sin respuestas correctas)    |
+| POST   | `/tests/:id/respuestas` | Con sesión | Califica el test en el servidor                  |
 | GET    | `/health`         | Público       | Estado de la API y de la base (sin prefijo)          |
 
 ### Seguridad
@@ -202,15 +208,18 @@ Todas las rutas usan el prefijo `/api/v1`. Los errores responden siempre con `{ 
 - Token de acceso JWT de 15 minutos y token de renovación de 7 días.
 - El rol se verifica en el servidor en cada ruta de administración.
 - El login responde igual si el correo no existe o si la contraseña es incorrecta, para no revelar qué cuentas existen.
+- Las respuestas correctas nunca salen del servidor: el diagnóstico y los tests se califican en la API.
 - El cupo de 6 integrantes se controla en una transacción que bloquea el grupo (`SELECT … FOR UPDATE`): aunque varias personas intenten unirse a la vez, nadie supera el límite.
 
 ### Modelo de datos
 
-El esquema está en `apps/api/db/schema.sql`: tablas `usuarios`, `grupos` y `grupo_integrantes`. Evaluaciones, resultados y mensajes se agregan en los próximos incrementos.
+El esquema está en `apps/api/db/schema.sql`: `usuarios`, `grupos`, `grupo_integrantes`, `evaluaciones`, `preguntas` y `resultados`. Al iniciar, la API carga el contenido inicial de `apps/api/src/content/evaluaciones.ts`: un diagnóstico de 12 preguntas (reading y writing, por competencia) y tests semanales de A1 a C1. Cada test semanal tiene un nivel y lo ven los integrantes de los grupos de ese nivel. Los mensajes del chat se agregan en un próximo incremento.
+
+La escala de puntaje a nivel (0–29 % A1, 30–49 % A2, 50–69 % B1, 70–84 % B2, 85–94 % C1, 95–100 % C2) es provisoria y está en `apps/api/src/evaluations/scoring.ts`. Las rúbricas de writing y speaking de la coordinación de inglés quedan como referencia para una futura evaluación de respuesta abierta.
 
 ### Conexión de la app con la API
 
-`packages/api` es el cliente HTTP que usa la app: adjunta el token, lo renueva cuando vence y entrega los errores con su mensaje. Hoy están conectados el **registro, el inicio de sesión, el cierre de sesión, la eliminación de cuenta y los grupos de estudio**; la evaluación diagnóstica, los tests semanales, el chat y la administración siguen con datos simulados.
+`packages/api` es el cliente HTTP que usa la app: adjunta el token, lo renueva cuando vence y entrega los errores con su mensaje. Hoy están conectados el **registro, el inicio de sesión, el cierre de sesión, la eliminación de cuenta, los grupos de estudio, la evaluación diagnóstica y los tests semanales**; la comunidad (chat) y la administración siguen con datos simulados.
 
 ```sh
 copy apps\mobile\.env.example apps\mobile\.env   # Windows (en macOS/Linux: cp)
@@ -220,7 +229,7 @@ En `apps/mobile/.env`, `EXPO_PUBLIC_API_URL` apunta a `http://localhost:3000` pa
 
 ### Pendiente
 
-Endpoints de evaluaciones (diagnóstica y tests semanales), chat y administración de usuarios, y su conexión con la app.
+Coordinación de encuentros, chat y administración (usuarios y evaluaciones), y su conexión con la app.
 
 ## Estado del proyecto
 

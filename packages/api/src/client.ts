@@ -2,10 +2,15 @@ import type {
   ApiError,
   AuthResponse,
   CreateGroupInput,
+  DiagnosticResult,
+  DiagnosticTest,
   GroupWithMembers,
   LoginInput,
   RegisterInput,
+  TestResult,
   User,
+  WeeklyTestDetail,
+  WeeklyTestSummary,
 } from "@grupo-estudio/types";
 import { ApiRequestError, sinConexion } from "./errors";
 
@@ -158,6 +163,32 @@ export function createApiClient({ baseUrl, tokens, timeoutMs = 10000 }: ApiClien
         request<GroupWithMembers>(`/grupos/${encodeURIComponent(id)}/integrantes`, { method: "POST", auth: true }),
       leave: (id: string) =>
         request<void>(`/grupos/${encodeURIComponent(id)}/integrantes/me`, { method: "DELETE", auth: true }),
+    },
+
+    diagnostic: {
+      get: () => request<DiagnosticTest>("/diagnostico", { auth: true }),
+      submit: (answers: Record<string, number>) =>
+        request<{ result: DiagnosticResult; user: User }>("/diagnostico/respuestas", {
+          method: "POST",
+          body: { answers },
+          auth: true,
+        }),
+      // null si el estudiante aún no lo rinde
+      result: async (): Promise<DiagnosticResult | null> => {
+        try {
+          return await request<DiagnosticResult>("/diagnostico/resultado", { auth: true });
+        } catch (error) {
+          if (error instanceof ApiRequestError && error.codigo === "SIN_DIAGNOSTICO") return null;
+          throw error;
+        }
+      },
+    },
+
+    tests: {
+      list: () => request<WeeklyTestSummary[]>("/tests", { auth: true }),
+      get: (id: string) => request<WeeklyTestDetail>(`/tests/${encodeURIComponent(id)}`, { auth: true }),
+      submit: (id: string, answers: Record<string, number>) =>
+        request<TestResult>(`/tests/${encodeURIComponent(id)}/respuestas`, { method: "POST", body: { answers }, auth: true }),
     },
   };
 }
