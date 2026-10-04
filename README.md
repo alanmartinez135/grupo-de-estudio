@@ -1,8 +1,8 @@
 # Grupo de Estudio Duoc UC
 
-Aplicación multiplataforma (móvil y web) para apoyar el aprendizaje del inglés entre estudiantes de Duoc UC. Permite conocer el nivel de inglés mediante una evaluación diagnóstica, formar grupos de estudio por nivel, resolver tests semanales y conversar con otros estudiantes. Proyecto APT (Capstone).
+Aplicación multiplataforma (móvil y web) para apoyar el aprendizaje del inglés entre estudiantes de Duoc UC. Permite conocer el nivel de inglés mediante una evaluación diagnóstica, formar grupos de estudio por nivel, resolver tests semanales y coordinar encuentros de estudio. Proyecto APT (Capstone).
 
-Estado: prototipo funcional. El frontend está completo y trabaja con datos simulados en memoria; la conexión con un servidor real aún no está implementada.
+Estado: MVP terminado (Fase 2). La app está conectada a una API propia con PostgreSQL y todo el sistema se ejecuta en local con Docker Compose. El chat y la recuperación de contraseña por correo quedan como trabajo futuro.
 
 ## Contenido
 
@@ -13,6 +13,7 @@ Estado: prototipo funcional. El frontend está completo y trabaja con datos simu
 - [Cuentas de prueba](#cuentas-de-prueba)
 - [Frontend (apps/mobile)](#frontend-appsmobile)
 - [Backend y comunicación cliente-servidor](#backend-y-comunicación-cliente-servidor)
+- [Documentación](#documentación)
 - [Estado del proyecto](#estado-del-proyecto)
 - [Equipo](#equipo)
 
@@ -20,11 +21,12 @@ Estado: prototipo funcional. El frontend está completo y trabaja con datos simu
 
 **Estudiante**
 
-- Registro e inicio de sesión con correo institucional `@duocuc.cl`, y recuperación de contraseña.
-- Evaluación diagnóstica de lectura y escritura, con resultados, fortalezas, aspectos a reforzar y recomendaciones.
+- Registro e inicio de sesión con correo institucional `@duocuc.cl`.
+- Evaluación diagnóstica de lectura y escritura calificada en el servidor: asigna el nivel (A1–C2) y entrega fortalezas, aspectos a reforzar y recomendaciones.
 - Grupos de estudio (máximo 6 integrantes): crear, unirse desde el listado o con código de invitación, ver integrantes y abandonar.
-- Tests semanales por grupo.
-- Comunidad: lista de contactos y chat.
+- Tests semanales según el nivel de sus grupos.
+- Encuentros de estudio: proponer (presencial u online), confirmar asistencia y ver los próximos en el inicio.
+- Comunidad: lista de contactos y chat (interfaz con datos simulados; trabajo futuro).
 - Ajustes: modo claro/oscuro, idioma (Español/English), cerrar sesión y eliminar cuenta.
 
 **Administrador**
@@ -40,12 +42,18 @@ Monorepo gestionado con [Turborepo](https://turborepo.dev/) y pnpm.
 grupo-de-estudio/
 ├── apps/
 │   ├── api/             # API REST (Fastify + PostgreSQL). Backend del proyecto.
+│   │   ├── db/          # Esquema SQL y script que crea la base de pruebas
+│   │   ├── perf/        # Prueba de carga con k6
+│   │   ├── src/         # Código por módulo: auth, users, groups, evaluations, meetings, admin
+│   │   └── test/        # Pruebas automatizadas (Vitest)
 │   └── mobile/          # App Expo (React Native + web). Frontend del proyecto.
+├── docs/diagramas/      # Diagrama entidad-relación y de componentes (Mermaid y PNG)
+├── docker-compose.yml   # Base de datos, API y app web
 └── packages/
-    ├── types/           # Esquemas y tipos compartidos (Zod): usuarios, grupos, auth y errores
-    ├── api/             # (stub) cliente de API, pendiente de implementar
-    ├── core/            # (stub) lógica compartida, pendiente de implementar
-    └── i18n/            # (stub) internacionalización con i18next, pendiente
+    ├── types/           # Contrato compartido (Zod): auth, usuarios, grupos, evaluaciones, encuentros, admin y errores
+    ├── api/             # Cliente HTTP que usa la app: tokens, renovación y errores
+    ├── core/            # (stub) lógica compartida, sin uso por ahora
+    └── i18n/            # (stub) internacionalización con i18next, sin uso por ahora
 ```
 
 ## Requisitos
@@ -56,13 +64,16 @@ grupo-de-estudio/
 
 ## Cómo ejecutar el proyecto
 
-Desde la raíz del repositorio:
+La forma más rápida de ver todo funcionando es [Todo en Docker](#todo-en-docker-base-api-y-app-web). Para desarrollar, primero levanta el backend ([Cómo levantar el backend](#cómo-levantar-el-backend)) y luego, desde la raíz del repositorio:
 
 ```sh
 # 1. Instalar dependencias de todo el monorepo
 pnpm install
 
-# 2. Iniciar la app (elige una opción)
+# 2. Variables de la app (una sola vez): apunta a la API
+copy apps\mobile\.env.example apps\mobile\.env   # Windows (en macOS/Linux: cp)
+
+# 3. Iniciar la app (elige una opción)
 pnpm --filter mobile start      # menú de Expo: escanear QR, abrir en emulador o en web
 pnpm --filter mobile web        # abrir directamente en el navegador
 pnpm --filter mobile android    # emulador Android
@@ -91,7 +102,7 @@ Un administrador ve un botón flotante dorado (**⇄**) para alternar entre su p
 | Estilos              | NativeWind 4 (Tailwind CSS 3), modo oscuro con clase `dark:`      |
 | Estado global        | Zustand                                                          |
 | Validación y tipos   | TypeScript y Zod (paquete `@grupo-estudio/types`)                |
-| Datos remotos        | TanStack Query (configurado en el layout raíz, aún sin uso)      |
+| Datos remotos        | Cliente propio `@grupo-estudio/api` llamado desde el store        |
 | Internacionalización | Diccionario liviano propio (`lib/i18n.ts`)                       |
 
 ### Organización de carpetas
@@ -99,7 +110,7 @@ Un administrador ve un botón flotante dorado (**⇄**) para alternar entre su p
 ```
 apps/mobile/
 ├── app/                  # Pantallas y rutas (Expo Router)
-│   ├── _layout.tsx       # Layout raíz: fuentes, tema, proveedor de TanStack Query
+│   ├── _layout.tsx       # Layout raíz: fuentes, tema y restauración de la sesión
 │   ├── (auth)/           # login, register, forgot-password, reset-password
 │   ├── (student)/        # dashboard, diagnostic-test, groups, weekly-tests, chat, settings
 │   └── (admin)/          # users, tests (listado y creación)
@@ -107,9 +118,12 @@ apps/mobile/
 │   ├── ui/               # Componentes base: Button, Card, Input, Modal, Badge, Avatar, ProgressBar, Screen
 │   ├── AppHeader.tsx     # Encabezado con navegación por rol y botón de tema
 │   ├── AuthShell.tsx     # Contenedor de las pantallas de autenticación
-│   └── RoleSwitcher.tsx  # Barra de desarrollo para cambiar de rol
+│   ├── MeetingsTab.tsx   # Encuentros del grupo: proponer y confirmar asistencia
+│   └── RoleSwitcher.tsx  # Botón del administrador para alternar con la vista de alumno
 ├── store/useAppStore.ts  # Estado global (Zustand)
-├── data/mockData.ts      # Datos ficticios y tipos de la interfaz
+├── data/mockData.ts      # Datos ficticios del chat, contactos y recuperación de contraseña (trabajo futuro)
+├── lib/api.ts            # Cliente de API configurado con EXPO_PUBLIC_API_URL
+├── lib/session.ts        # Guarda los tokens (secure-store en móvil, memoria en web)
 ├── lib/i18n.ts           # Textos Español/English
 ├── tailwind.config.js    # Paleta institucional y configuración de NativeWind
 └── app.json              # Configuración de Expo
@@ -117,7 +131,7 @@ apps/mobile/
 
 ### Navegación
 
-Las carpetas entre paréntesis son *grupos de rutas*: organizan las pantallas por rol sin afectar la URL, y cada una tiene su propio `_layout.tsx`. Los layouts `(student)` y `(admin)` redirigen a `/(auth)/login` si no hay sesión iniciada.
+Las carpetas entre paréntesis son *grupos de rutas*: organizan las pantallas por rol sin afectar la URL, y cada una tiene su propio `_layout.tsx`. Los layouts `(student)` y `(admin)` redirigen a `/(auth)/login` si no hay sesión iniciada, y `(admin)` envía al inicio del estudiante a quien no es administrador.
 
 | Grupo       | Ruta                          | Pantalla                                  |
 | ----------- | ----------------------------- | ----------------------------------------- |
@@ -263,6 +277,11 @@ En `apps/mobile/.env`, `EXPO_PUBLIC_API_URL` apunta a `http://localhost:3000` pa
 ### Pendiente
 
 Trabajo futuro: chat entre estudiantes, recuperación de contraseña por correo, evaluación de respuesta abierta según las rúbricas de la coordinación de inglés y despliegue en la nube con HTTPS (el proyecto académico se ejecuta en local).
+
+## Documentación
+
+- `docs/diagramas/`: [modelo entidad-relación](docs/diagramas/modelo-er.md) y [diagrama de componentes v2](docs/diagramas/componentes.md), en Mermaid (GitHub los dibuja al abrirlos), más su versión en imagen `.png`.
+- Anexo técnico, plan de pruebas, Product Vision, Definition of Done y manual técnico: repositorio de documentación del equipo ([alanmartinez135/capstone](https://github.com/alanmartinez135/capstone)), carpeta Fase 2.
 
 ## Estado del proyecto
 
