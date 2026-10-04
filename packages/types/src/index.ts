@@ -4,3 +4,4 @@ export * from "./auth";
 export * from "./errors";
 export * from "./evaluation";
 export * from "./meeting";
+export * from "./admin";

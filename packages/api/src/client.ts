@@ -1,15 +1,18 @@
 import type {
+  AdminEvaluation,
   ApiError,
   Attendance,
   AuthResponse,
   CreateMeetingInput,
   CreateGroupInput,
+  CreateWeeklyTestInput,
   DiagnosticResult,
   DiagnosticTest,
   GroupWithMembers,
   LoginInput,
   Meeting,
   RegisterInput,
+  Role,
   TestResult,
   User,
   WeeklyTestDetail,
@@ -153,6 +156,32 @@ export function createApiClient({ baseUrl, tokens, timeoutMs = 10000 }: ApiClien
     users: {
       me: () => request<User>("/usuarios/me", { auth: true }),
       deleteMe: () => request<void>("/usuarios/me", { method: "DELETE", auth: true }),
+    },
+
+    // Solo administradores (el servidor lo verifica en cada solicitud).
+    admin: {
+      users: (filters: { q?: string; role?: Role } = {}) => {
+        const params = new URLSearchParams();
+        if (filters.q?.trim()) params.set("q", filters.q.trim());
+        if (filters.role) params.set("rol", filters.role);
+        const query = params.toString();
+        return request<User[]>(`/usuarios${query ? `?${query}` : ""}`, { auth: true });
+      },
+      setRole: (userId: string, role: Role) =>
+        request<User>(`/usuarios/${encodeURIComponent(userId)}/rol`, { method: "PATCH", body: { role }, auth: true }),
+      deleteUser: (userId: string) =>
+        request<void>(`/usuarios/${encodeURIComponent(userId)}`, { method: "DELETE", auth: true }),
+      evaluations: () => request<AdminEvaluation[]>("/admin/evaluaciones", { auth: true }),
+      createTest: (input: CreateWeeklyTestInput) =>
+        request<AdminEvaluation>("/admin/evaluaciones", { method: "POST", body: input, auth: true }),
+      setPublished: (evaluationId: string, published: boolean) =>
+        request<AdminEvaluation>(`/admin/evaluaciones/${encodeURIComponent(evaluationId)}`, {
+          method: "PATCH",
+          body: { published },
+          auth: true,
+        }),
+      deleteEvaluation: (evaluationId: string) =>
+        request<void>(`/admin/evaluaciones/${encodeURIComponent(evaluationId)}`, { method: "DELETE", auth: true }),
     },
 
     groups: {

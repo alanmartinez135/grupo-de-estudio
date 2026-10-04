@@ -47,8 +47,27 @@ export async function findById(db: Db, id: string): Promise<UserWithHash | null>
 }
 
 export async function deleteUser(db: Db, id: string): Promise<void> {
-  // Las membresías se borran en cascada (ON DELETE CASCADE en grupo_integrantes).
-  await db.query("DELETE FROM usuarios WHERE id = $1", [id]);
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    // Las membresías, resultados y asistencias se borran en cascada.
+    await client.query("DELETE FROM usuarios WHERE id = $1", [id]);
+    // Igual que al abandonar un grupo: si quedó sin integrantes, se elimina.
+    await client.query(
+      "DELETE FROM grupos g WHERE NOT EXISTS (SELECT 1 FROM grupo_integrantes gi WHERE gi.grupo_id = g.id)",
+    );
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function updateRole(db: Db, id: string, role: Role): Promise<UserWithHash | null> {
+  const { rows } = await db.query<UserRow>(`UPDATE usuarios SET rol = $2 WHERE id = $1 RETURNING ${COLUMNS}`, [id, role]);
+  return rows[0] ? toUser(rows[0]) : null;
 }
 
 export async function insertUser(

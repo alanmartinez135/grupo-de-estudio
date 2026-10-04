@@ -12,8 +12,12 @@ async function insertQuestions(db: Db, evaluation: EvaluationContent) {
   }
 }
 
-// Carga el contenido inicial (src/content/evaluaciones.ts). Es idempotente: si ya existe, no lo toca.
+// Carga el contenido inicial (src/content/evaluaciones.ts) solo en una base sin evaluaciones.
+// Así, lo que un administrador elimine o modifique no reaparece al reiniciar la API.
 export async function seedContent(db: Db): Promise<void> {
+  const { rows } = await db.query<{ n: number }>("SELECT count(*)::int AS n FROM evaluaciones");
+  if (rows[0]!.n > 0) return;
+
   await db.query(
     `INSERT INTO evaluaciones (id, tipo, titulo) VALUES ($1, 'diagnostica', $2) ON CONFLICT (id) DO NOTHING`,
     [DIAGNOSTICO.id, DIAGNOSTICO.title],

@@ -1,5 +1,7 @@
-# Desarrollo:  docker compose up -d db        (solo PostgreSQL; la API corre con pnpm)
-# Completo:    docker compose up -d --build   (PostgreSQL + API en contenedores)
+# Desarrollo:  docker compose up -d db        (solo PostgreSQL; la API y la app corren con pnpm)
+# Completo:    docker compose up -d --build   (PostgreSQL + API + app web en contenedores)
+#              App: http://localhost:8081 · API: http://localhost:3000
+# Antes del modo completo, detén "pnpm --filter api dev" y "pnpm --filter mobile web" (usan los mismos puertos).
 services:
   db:
     image: postgres:16-alpine
@@ -32,6 +34,20 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/mobile/Dockerfile
+      args:
+        # URL del API que usará el navegador. Para abrir la app desde otro dispositivo de la red,
+        # usa la IP del computador en ambas variables:
+        #   EXPO_PUBLIC_API_URL=http://192.168.x.x:3000 CORS_ORIGIN=http://192.168.x.x:8081 docker compose up -d --build
+        EXPO_PUBLIC_API_URL: ${EXPO_PUBLIC_API_URL:-http://localhost:3000}
+    ports:
+      - "8081:80"
+    depends_on:
+      - api
 
 volumes:
   db-data:

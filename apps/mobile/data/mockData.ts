@@ -75,19 +75,3 @@ export const mockChats: Record<string, ChatMessage[]> = {
     { id: "m-4", senderId: "u-4", text: "Subí el resumen de reading comprehension al grupo.", sentAt: "ayer" },
   ],
 };
-
-export interface AdminTestDefinition {
-  id: string;
-  title: string;
-  type: "inicial" | "semanal";
-  skill: Skill;
-  questionCount: number;
-  status: "publicado" | "borrador";
-}
-
-export const mockAdminTests: AdminTestDefinition[] = [
-  { id: "at-1", title: "Evaluación Diagnóstica General", type: "inicial", skill: "reading", questionCount: 6, status: "publicado" },
-  { id: "at-2", title: "Conditionals I", type: "semanal", skill: "writing", questionCount: 3, status: "publicado" },
-  { id: "at-3", title: "Skimming & Scanning", type: "semanal", skill: "reading", questionCount: 3, status: "publicado" },
-  { id: "at-4", title: "Phrasal Verbs básicos", type: "semanal", skill: "writing", questionCount: 5, status: "borrador" },
-];

@@ -10,7 +10,6 @@ import type {
 import { api, errorMessage } from "@/lib/api";
 
 import {
-  AdminTestDefinition,
   ChatMessage,
   CURRENT_USER_ID,
   Language,
@@ -18,7 +17,6 @@ import {
   Role,
   StudyGroupUI,
   Theme,
-  mockAdminTests,
   mockChats,
   mockFriends,
   mockUsers,
@@ -89,12 +87,8 @@ interface AppState {
   sendMessage: (friendId: string, text: string) => void;
   addFriend: (name: string) => void;
 
-  // --- admin ---
-  adminTests: AdminTestDefinition[];
-  addAdminTest: (test: Omit<AdminTestDefinition, "id">) => void;
-  removeAdminTest: (id: string) => void;
-  updateUserRole: (userId: string, role: Role) => void;
-  removeUser: (userId: string) => void;
+  // La gestión de usuarios y evaluaciones del administrador usa el API directamente
+  // desde sus pantallas (app/(admin)); no necesita estado global.
 }
 
 // El API entrega el usuario sin contraseña ni color de avatar; mientras el resto de la
@@ -298,13 +292,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({ friends: [...s.friends, newFriend] }));
   },
 
-  adminTests: mockAdminTests,
-  addAdminTest: (test) =>
-    set((s) => ({ adminTests: [{ ...test, id: `at-${Date.now()}` }, ...s.adminTests] })),
-  removeAdminTest: (id) => set((s) => ({ adminTests: s.adminTests.filter((t) => t.id !== id) })),
-  updateUserRole: (userId, role) =>
-    set((s) => ({ users: s.users.map((u) => (u.id === userId ? { ...u, role } : u)) })),
-  removeUser: (userId) => set((s) => ({ users: s.users.filter((u) => u.id !== userId) })),
 }));
 
 // Si el servidor rechaza la sesión y no se puede renovar, se vuelve al login.

@@ -7,6 +7,7 @@ export function RoleSwitcher() {
   const [open, setOpen] = useState(false);
   const activeRole = useAppStore((s) => s.activeRole);
   const setActiveRole = useAppStore((s) => s.setActiveRole);
+  const isAdmin = useAppStore((s) => s.authUser?.role === "admin");
 
   function pick(role: "student" | "admin") {
     setActiveRole(role);
@@ -14,11 +15,14 @@ export function RoleSwitcher() {
     router.replace(role === "student" ? "/(student)/dashboard" : "/(admin)/users");
   }
 
+  // Solo un administrador puede alternar entre su panel y la vista de alumno.
+  if (!isAdmin) return null;
+
   return (
     <View style={{ position: "absolute", bottom: 24, right: 20, zIndex: 50 }}>
       {open && (
         <View className="mb-3 rounded-2xl bg-navy-800 p-2 w-52 shadow-lg">
-          <Text className="text-[11px] font-semibold text-navy-100 px-3 pt-1 pb-2">Dev Toolbar · cambiar rol</Text>
+          <Text className="text-[11px] font-semibold text-navy-100 px-3 pt-1 pb-2">Cambiar vista</Text>
           <Pressable
             onPress={() => pick("student")}
             className={`rounded-full px-4 py-2.5 mb-1 ${activeRole === "student" ? "bg-gold-500" : "bg-navy-700"}`}

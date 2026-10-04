@@ -30,7 +30,7 @@ Estado: prototipo funcional. El frontend está completo y trabaja con datos simu
 **Administrador**
 
 - Gestión de usuarios: búsqueda, filtro por rol, cambio de rol y eliminación.
-- Gestión de evaluaciones: listado y creación (estado borrador o publicado).
+- Gestión de evaluaciones: listado con número de respuestas, creación de tests semanales de selección múltiple (nivel, habilidad, preguntas y alternativa correcta), publicación y eliminación.
 
 ## Estructura del repositorio
 
@@ -78,7 +78,7 @@ El inicio de sesión y el registro usan la API real, así que las cuentas viven 
 - **Estudiante:** crea una desde la pantalla de registro (correo `@duocuc.cl`, contraseña de al menos 8 caracteres).
 - **Administrador:** define `SEED_ADMIN_CORREO` y `SEED_ADMIN_PASSWORD` en `apps/api/.env` y ejecuta `pnpm --filter api db:seed`.
 
-Dentro de la app, el botón flotante dorado (**⇄**, "Dev Toolbar") permite cambiar entre la vista de Alumno y la de Administrador para revisar las pantallas. Es solo visual: la API sigue validando el rol real en cada solicitud.
+Un administrador ve un botón flotante dorado (**⇄**) para alternar entre su panel y la vista de alumno. Los estudiantes no lo ven y no pueden abrir las pantallas de administración; de todos modos, la API valida el rol real en cada solicitud.
 
 ## Frontend (apps/mobile)
 
@@ -146,7 +146,7 @@ Las carpetas entre paréntesis son *grupos de rutas*: organizan las pantallas po
 
 ### Estado y datos
 
-Todo el estado de la aplicación vive en `store/useAppStore.ts` y parte de los datos ficticios de `data/mockData.ts`. Las acciones que pueden fallar (login, registro, unirse a un grupo) devuelven un objeto `{ ok, message }`, que simula la respuesta que luego entregará el servidor. Los datos se reinician al recargar la app.
+El estado compartido (sesión, grupos, diagnóstico, tests) vive en `store/useAppStore.ts` y se carga desde la API. Las acciones que pueden fallar devuelven `{ ok, message }` con el mensaje del servidor. Las pantallas de administración consultan la API directamente. Solo la comunidad (chat y contactos) y la recuperación de contraseña siguen usando datos de `data/mockData.ts`.
 
 ## Backend y comunicación cliente-servidor
 
@@ -174,7 +174,29 @@ pnpm --filter api db:seed
 pnpm --filter api test
 ```
 
-Para levantar todo en contenedores (base y API): `docker compose up -d --build`.
+### Todo en Docker (base, API y app web)
+
+El proyecto se ejecuta en local; no hay despliegue en la nube. Con Docker Desktop abierto y sin `pnpm dev` ni Expo corriendo (usan los mismos puertos):
+
+```sh
+docker compose up -d --build
+```
+
+- App web: http://localhost:8081 (build estático de Expo servido con nginx).
+- API: http://localhost:3000/health
+- La base queda expuesta en el puerto 5432, así que el administrador se crea igual que en desarrollo: `pnpm --filter api db:seed`.
+
+Para abrir la app desde otro equipo de la red, define `EXPO_PUBLIC_API_URL=http://<IP-del-PC>:3000` y `CORS_ORIGIN=http://<IP-del-PC>:8081` antes del `docker compose up -d --build` (ver comentarios en `docker-compose.yml`).
+
+### Pruebas de carga (k6)
+
+`apps/api/perf/carga.js` crea 100 estudiantes en grupos de 6, simula usuarios concurrentes que consultan su sesión, grupos, tests y encuentros, y un inicio de sesión por segundo. Exige p95 menor a 500 ms y menos de 1 % de errores (RNF-B01 y RNF-B03). Con la API corriendo en el puerto 3000:
+
+```sh
+docker run --rm -i -e BASE_URL=http://host.docker.internal:3000 grafana/k6 run - < apps/api/perf/carga.js
+```
+
+Variables opcionales: `USUARIOS` (cuentas creadas y usuarios simultáneos, por defecto 100) y `DURACION` (por ejemplo `10m` para la medición formal). Al terminar, el script elimina las cuentas que creó. En PowerShell, `<` no funciona: usa `Get-Content apps/api/perf/carga.js | docker run --rm -i -e BASE_URL=http://host.docker.internal:3000 grafana/k6 run -`.
 
 ### Endpoints disponibles
 
@@ -188,6 +210,8 @@ Todas las rutas usan el prefijo `/api/v1`. Los errores responden siempre con `{ 
 | GET    | `/usuarios/me`    | Con sesión    | Datos del usuario de la sesión                       |
 | DELETE | `/usuarios/me`    | Con sesión    | Elimina la cuenta y sus datos                        |
 | GET    | `/usuarios`       | Administrador | Lista y filtra usuarios (`?q=` y `?rol=`)             |
+| PATCH  | `/usuarios/:id/rol` | Administrador | Cambia el rol de otra cuenta (no la propia)       |
+| DELETE | `/usuarios/:id`   | Administrador | Elimina otra cuenta y sus datos                      |
 | GET    | `/grupos`         | Con sesión    | Lista los grupos con sus integrantes                 |
 | POST   | `/grupos`         | Con sesión    | Crea un grupo (código `DUOC-####`); el creador queda como integrante |
 | GET    | `/grupos/:id`     | Con sesión    | Detalle de un grupo                                  |
@@ -205,6 +229,10 @@ Todas las rutas usan el prefijo `/api/v1`. Los errores responden siempre con `{ 
 | PUT    | `/encuentros/:id/asistencia` | Integrante | Confirmar o rechazar asistencia            |
 | DELETE | `/encuentros/:id` | Quien lo propuso | Cancelar el encuentro                         |
 | GET    | `/encuentros/proximos` | Con sesión | Próximos encuentros de todos mis grupos         |
+| GET    | `/admin/evaluaciones` | Administrador | Todas las evaluaciones, incluidos borradores, con preguntas y respuestas |
+| POST   | `/admin/evaluaciones` | Administrador | Crea un test semanal de selección múltiple (queda como borrador) |
+| PATCH  | `/admin/evaluaciones/:id` | Administrador | Publica o vuelve a borrador; al publicar, el plazo es de una semana |
+| DELETE | `/admin/evaluaciones/:id` | Administrador | Elimina un test y sus resultados (la diagnóstica está protegida) |
 | GET    | `/health`         | Público       | Estado de la API y de la base (sin prefijo)          |
 
 ### Seguridad
@@ -218,13 +246,13 @@ Todas las rutas usan el prefijo `/api/v1`. Los errores responden siempre con `{ 
 
 ### Modelo de datos
 
-El esquema está en `apps/api/db/schema.sql`: `usuarios`, `grupos`, `grupo_integrantes`, `evaluaciones`, `preguntas`, `resultados`, `encuentros` y `asistencias`. Al iniciar, la API carga el contenido inicial de `apps/api/src/content/evaluaciones.ts`: un diagnóstico de 12 preguntas (reading y writing, por competencia) y tests semanales de A1 a C1. Cada test semanal tiene un nivel y lo ven los integrantes de los grupos de ese nivel. Los mensajes del chat quedan como trabajo futuro.
+El esquema está en `apps/api/db/schema.sql`: `usuarios`, `grupos`, `grupo_integrantes`, `evaluaciones`, `preguntas`, `resultados`, `encuentros` y `asistencias`. Al iniciar con una base sin evaluaciones, la API carga el contenido inicial de `apps/api/src/content/evaluaciones.ts` (si ya hay evaluaciones no lo vuelve a cargar, para respetar lo que el administrador haya eliminado): un diagnóstico de 12 preguntas (reading y writing, por competencia) y tests semanales de A1 a C1. Cada test semanal tiene un nivel y lo ven los integrantes de los grupos de ese nivel. Los mensajes del chat quedan como trabajo futuro.
 
 La escala de puntaje a nivel (0–29 % A1, 30–49 % A2, 50–69 % B1, 70–84 % B2, 85–94 % C1, 95–100 % C2) es provisoria y está en `apps/api/src/evaluations/scoring.ts`. Las rúbricas de writing y speaking de la coordinación de inglés quedan como referencia para una futura evaluación de respuesta abierta.
 
 ### Conexión de la app con la API
 
-`packages/api` es el cliente HTTP que usa la app: adjunta el token, lo renueva cuando vence y entrega los errores con su mensaje. Hoy están conectados el **registro, el inicio de sesión, el cierre de sesión, la eliminación de cuenta, los grupos de estudio, la evaluación diagnóstica, los tests semanales y la coordinación de encuentros**; la comunidad (chat) y la administración siguen con datos simulados.
+`packages/api` es el cliente HTTP que usa la app: adjunta el token, lo renueva cuando vence y entrega los errores con su mensaje. Hoy están conectados el **registro, el inicio de sesión, el cierre de sesión, la eliminación de cuenta, los grupos de estudio, la evaluación diagnóstica, los tests semanales, la coordinación de encuentros y el panel de administración**; la comunidad (chat) sigue con datos simulados.
 
 ```sh
 copy apps\mobile\.env.example apps\mobile\.env   # Windows (en macOS/Linux: cp)
@@ -234,12 +262,12 @@ En `apps/mobile/.env`, `EXPO_PUBLIC_API_URL` apunta a `http://localhost:3000` pa
 
 ### Pendiente
 
-Despliegue en la nube, pruebas de rendimiento (k6), administración (usuarios y evaluaciones) conectada a la API y, como trabajo futuro, el chat y la recuperación de contraseña por correo.
+Trabajo futuro: chat entre estudiantes, recuperación de contraseña por correo, evaluación de respuesta abierta según las rúbricas de la coordinación de inglés y despliegue en la nube con HTTPS (el proyecto académico se ejecuta en local).
 
 ## Estado del proyecto
 
-- Hecho: interfaz completa de 16 pantallas, navegación por roles, sistema de diseño, modo oscuro, reglas de negocio simuladas en el store.
-- Pendiente: conexión con un servidor y base de datos reales, persistencia, autenticación segura (las contraseñas de prueba solo existen en el mock), traducción completa del idioma y pruebas automatizadas.
+- Hecho: interfaz de 16 pantallas; API Fastify con PostgreSQL; autenticación con JWT y Argon2id; grupos, diagnóstico, tests semanales, encuentros y administración conectados; pruebas automatizadas (Vitest) y de carga (k6); ejecución completa con Docker Compose.
+- Pendiente: chat, recuperación de contraseña por correo y traducción completa del idioma.
 
 ## Equipo
 
