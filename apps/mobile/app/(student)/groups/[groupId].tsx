@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/store/useAppStore";
+import { MeetingsTab } from "@/components/MeetingsTab";
 import { MAX_GROUP_MEMBERS } from "@/data/mockData";
 
 export default function GroupDetailScreen() {
@@ -19,7 +20,7 @@ export default function GroupDetailScreen() {
   const loadGroups = useAppStore((s) => s.loadGroups);
   const allWeeklyTests = useAppStore((s) => s.weeklyTests);
   const weeklyTests = allWeeklyTests.filter((t) => t.groupIds.includes(groupId ?? ""));
-  const [tab, setTab] = useState<"members" | "tests">("members");
+  const [tab, setTab] = useState<"members" | "tests" | "meetings">("members");
   const [copied, setCopied] = useState(false);
   const [joinError, setJoinError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -94,11 +95,22 @@ export default function GroupDetailScreen() {
           <Text className={`font-semibold ${tab === "members" ? "text-navy-700 dark:text-gold-500" : "text-ink-muted dark:text-ink-mutedDark"}`}>Integrantes</Text>
         </Pressable>
         <Pressable onPress={() => setTab("tests")} className={`flex-1 rounded-full py-2 items-center ${tab === "tests" ? "bg-white dark:bg-navy-700" : ""}`}>
-          <Text className={`font-semibold ${tab === "tests" ? "text-navy-700 dark:text-gold-500" : "text-ink-muted dark:text-ink-mutedDark"}`}>Tests semanales</Text>
+          <Text className={`font-semibold ${tab === "tests" ? "text-navy-700 dark:text-gold-500" : "text-ink-muted dark:text-ink-mutedDark"}`}>Tests</Text>
+        </Pressable>
+        <Pressable onPress={() => setTab("meetings")} className={`flex-1 rounded-full py-2 items-center ${tab === "meetings" ? "bg-white dark:bg-navy-700" : ""}`}>
+          <Text className={`font-semibold ${tab === "meetings" ? "text-navy-700 dark:text-gold-500" : "text-ink-muted dark:text-ink-mutedDark"}`}>Encuentros</Text>
         </Pressable>
       </View>
 
-      {tab === "members" ? (
+      {tab === "meetings" ? (
+        isMember ? (
+          <MeetingsTab groupId={group.id} />
+        ) : (
+          <Card>
+            <Text className="text-ink-muted dark:text-ink-mutedDark">Únete al grupo para ver y proponer encuentros de estudio.</Text>
+          </Card>
+        )
+      ) : tab === "members" ? (
         <View className="gap-2.5">
           {members.map((m) => (
             <Card key={m.id} className="flex-row items-center gap-3">
