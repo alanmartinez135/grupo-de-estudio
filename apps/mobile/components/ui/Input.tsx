@@ -10,7 +10,9 @@ export function Input({ label, error, ...rest }: InputProps) {
   const dark = useAppStore((s) => s.theme === "dark");
   return (
     <View className="mb-4">
-      <Text className={`mb-1.5 text-sm font-medium ${dark ? "text-ink-mutedDark" : "text-ink-muted"}`}>{label}</Text>
+      {label ? (
+        <Text className={`mb-1.5 text-sm font-medium ${dark ? "text-ink-mutedDark" : "text-ink-muted"}`}>{label}</Text>
+      ) : null}
       <TextInput
         placeholderTextColor={dark ? "#5B6B85" : "#9AA8C2"}
         className={`rounded-xl2 px-4 py-3 text-base border ${

@@ -16,6 +16,8 @@ export default function AdminLayout() {
 
   if (!sessionChecked) return null;
   if (!authUser) return <Redirect href="/(auth)/login" />;
+  // El servidor rechaza igual a quien no es administrador (RNF-B06); esto evita mostrarle la pantalla.
+  if (authUser.role !== "admin") return <Redirect href="/(student)/dashboard" />;
 
   return (
     <View className={`flex-1 ${theme === "dark" ? "bg-surface-dark" : "bg-surface-light"}`}>

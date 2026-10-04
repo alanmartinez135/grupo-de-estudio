@@ -1,35 +1,32 @@
-import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
+import type { DiagnosticTest } from "@grupo-estudio/types";
 import { Screen } from "@/components/ui/Screen";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/store/useAppStore";
-import { diagnosticTestQuestions } from "@/data/mockData";
+import { api, errorMessage } from "@/lib/api";
 
 export default function DiagnosticTestScreen() {
   const submitDiagnosticTest = useAppStore((s) => s.submitDiagnosticTest);
   const diagnosticCompleted = useAppStore((s) => s.diagnosticCompleted);
+  const [test, setTest] = useState<DiagnosticTest | null>(null);
+  const [loadError, setLoadError] = useState("");
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
-  const question = diagnosticTestQuestions[step];
-  const progress = Math.round(((step + 1) / diagnosticTestQuestions.length) * 100);
-  const isLast = step === diagnosticTestQuestions.length - 1;
-
-  function selectAnswer(index: number) {
-    setAnswers((a) => ({ ...a, [question.id]: index }));
-  }
-
-  function handleNext() {
-    if (isLast) {
-      submitDiagnosticTest();
-      router.replace("/(student)/diagnostic-test/result");
-      return;
-    }
-    setStep((s) => s + 1);
-  }
+  // Las preguntas vienen del servidor, sin la respuesta correcta.
+  useEffect(() => {
+    if (diagnosticCompleted) return;
+    api.diagnostic
+      .get()
+      .then(setTest)
+      .catch((error) => setLoadError(errorMessage(error)));
+  }, [diagnosticCompleted]);
 
   if (diagnosticCompleted) {
     return (
@@ -43,12 +40,45 @@ export default function DiagnosticTestScreen() {
     );
   }
 
+  if (!test) {
+    return (
+      <Screen>
+        {loadError ? (
+          <Card>
+            <Text className="text-ink-light dark:text-ink-dark">{loadError}</Text>
+          </Card>
+        ) : (
+          <ActivityIndicator className="mt-10" />
+        )}
+      </Screen>
+    );
+  }
+
+  const questions = test.questions;
+  const question = questions[step]!;
+  const progress = Math.round(((step + 1) / questions.length) * 100);
+  const isLast = step === questions.length - 1;
+
+  function selectAnswer(index: number) {
+    setAnswers((a) => ({ ...a, [question.id]: index }));
+  }
+
+  async function handleNext() {
+    if (!isLast) return setStep((s) => s + 1);
+    setSubmitting(true);
+    setSubmitError("");
+    const result = await submitDiagnosticTest(answers);
+    setSubmitting(false);
+    if (!result.ok) return setSubmitError(result.message);
+    router.replace("/(student)/diagnostic-test/result");
+  }
+
   return (
     <Screen>
       <View className="flex-row items-center justify-between mb-2">
         <Badge label={question.skill === "reading" ? "Lectura" : "Escritura"} tone="gold" />
         <Text className="text-ink-muted dark:text-ink-mutedDark text-sm">
-          {step + 1} / {diagnosticTestQuestions.length}
+          {step + 1} / {questions.length}
         </Text>
       </View>
       <View className="h-2 w-full rounded-full bg-navy-50 dark:bg-navy-800 mb-6 overflow-hidden">
@@ -56,6 +86,7 @@ export default function DiagnosticTestScreen() {
       </View>
 
       <Card className="mb-5">
+        <Text className="text-xs text-ink-muted dark:text-ink-mutedDark mb-1">{question.competency}</Text>
         <Text className="text-lg font-semibold text-ink-light dark:text-ink-dark leading-6">{question.prompt}</Text>
       </Card>
 
@@ -76,12 +107,19 @@ export default function DiagnosticTestScreen() {
         })}
       </View>
 
-      <Button
-        label={isLast ? "Finalizar evaluación" : "Siguiente"}
-        onPress={handleNext}
-        disabled={answers[question.id] === undefined}
-        fullWidth
-      />
+      {submitError ? <Text className="text-xs text-red-500 mb-2">{submitError}</Text> : null}
+      <View className="flex-row gap-3">
+        {step > 0 && <Button label="Anterior" variant="outline" onPress={() => setStep((s) => s - 1)} />}
+        <View className="flex-1">
+          <Button
+            label={isLast ? "Finalizar evaluación" : "Siguiente"}
+            onPress={handleNext}
+            loading={submitting}
+            disabled={answers[question.id] === undefined}
+            fullWidth
+          />
+        </View>
+      </View>
     </Screen>
   );
 }

@@ -7,6 +7,10 @@ import type { Db } from "./db/pool";
 import { errorHandler } from "./errors";
 import { authRoutes } from "./auth/routes";
 import { userRoutes } from "./users/routes";
+import { groupRoutes } from "./groups/routes";
+import { evaluationRoutes } from "./evaluations/routes";
+import { meetingRoutes } from "./meetings/routes";
+import { adminRoutes } from "./admin/routes";
 
 export async function buildApp({ config, db }: { config: Config; db: Db }) {
   const app = Fastify({
@@ -24,7 +28,7 @@ export async function buildApp({ config, db }: { config: Config; db: Db }) {
   // CORS limitado a los orígenes de CORS_ORIGIN; la app nativa no lo necesita (RNF-B07).
   await app.register(cors, {
     origin: config.corsOrigins,
-    methods: ["GET", "HEAD", "POST", "PATCH", "DELETE"],
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   });
   await app.register(jwt, { secret: config.jwtSecret });
@@ -39,6 +43,10 @@ export async function buildApp({ config, db }: { config: Config; db: Db }) {
 
   await app.register(authRoutes, { prefix: "/api/v1", db, config });
   await app.register(userRoutes, { prefix: "/api/v1", db });
+  await app.register(groupRoutes, { prefix: "/api/v1", db });
+  await app.register(evaluationRoutes, { prefix: "/api/v1", db });
+  await app.register(meetingRoutes, { prefix: "/api/v1", db });
+  await app.register(adminRoutes, { prefix: "/api/v1", db });
 
   return app;
 }

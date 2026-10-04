@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Screen } from "@/components/ui/Screen";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/store/useAppStore";
+import { MeetingsTab } from "@/components/MeetingsTab";
 import { MAX_GROUP_MEMBERS } from "@/data/mockData";
 
 export default function GroupDetailScreen() {
@@ -16,11 +17,18 @@ export default function GroupDetailScreen() {
   const authUser = useAppStore((s) => s.authUser);
   const joinGroupById = useAppStore((s) => s.joinGroupById);
   const leaveGroup = useAppStore((s) => s.leaveGroup);
+  const loadGroups = useAppStore((s) => s.loadGroups);
   const allWeeklyTests = useAppStore((s) => s.weeklyTests);
-  const weeklyTests = allWeeklyTests.filter((t) => t.groupId === groupId);
-  const [tab, setTab] = useState<"members" | "tests">("members");
+  const weeklyTests = allWeeklyTests.filter((t) => t.groupIds.includes(groupId ?? ""));
+  const [tab, setTab] = useState<"members" | "tests" | "meetings">("members");
   const [copied, setCopied] = useState(false);
   const [joinError, setJoinError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  // Si se entra directo por URL (o tras recargar), el grupo aún no está en el store.
+  useEffect(() => {
+    if (!group) loadGroups();
+  }, [group, loadGroups]);
 
   if (!group) {
     return (
@@ -40,17 +48,24 @@ export default function GroupDetailScreen() {
     setTimeout(() => setCopied(false), 1500);
   }
 
-  function handleJoin() {
-    const result = joinGroupById(group!.id);
+  async function handleJoin() {
+    setBusy(true);
+    const result = await joinGroupById(group!.id);
+    setBusy(false);
     setJoinError(result.ok ? "" : result.message);
   }
 
-  function handleLeave() {
-    leaveGroup(group!.id);
+  async function handleLeave() {
+    setBusy(true);
+    const result = await leaveGroup(group!.id);
+    setBusy(false);
+    if (!result.ok) return setJoinError(result.message);
     router.replace("/(student)/groups");
   }
 
-  const members = users.filter((u) => group.memberIds.includes(u.id));
+  // Los integrantes vienen de la API; los grupos simulados se resuelven con la lista local.
+  const members: { id: string; name: string; career: string; avatarColor?: string }[] =
+    group.members ?? users.filter((u) => group.memberIds.includes(u.id));
   const isMember = group.memberIds.includes(authUser?.id ?? "");
 
   return (
@@ -67,9 +82,9 @@ export default function GroupDetailScreen() {
         </View>
         <View className="mt-4">
           {isMember ? (
-            <Button label="Abandonar grupo" variant="outline" onPress={handleLeave} fullWidth />
+            <Button label="Abandonar grupo" variant="outline" onPress={handleLeave} loading={busy} fullWidth />
           ) : (
-            <Button label="Unirme al grupo" onPress={handleJoin} fullWidth />
+            <Button label="Unirme al grupo" onPress={handleJoin} loading={busy} fullWidth />
           )}
           {joinError ? <Text className="mt-1 text-xs text-red-500">{joinError}</Text> : null}
         </View>
@@ -80,11 +95,22 @@ export default function GroupDetailScreen() {
           <Text className={`font-semibold ${tab === "members" ? "text-navy-700 dark:text-gold-500" : "text-ink-muted dark:text-ink-mutedDark"}`}>Integrantes</Text>
         </Pressable>
         <Pressable onPress={() => setTab("tests")} className={`flex-1 rounded-full py-2 items-center ${tab === "tests" ? "bg-white dark:bg-navy-700" : ""}`}>
-          <Text className={`font-semibold ${tab === "tests" ? "text-navy-700 dark:text-gold-500" : "text-ink-muted dark:text-ink-mutedDark"}`}>Tests semanales</Text>
+          <Text className={`font-semibold ${tab === "tests" ? "text-navy-700 dark:text-gold-500" : "text-ink-muted dark:text-ink-mutedDark"}`}>Tests</Text>
+        </Pressable>
+        <Pressable onPress={() => setTab("meetings")} className={`flex-1 rounded-full py-2 items-center ${tab === "meetings" ? "bg-white dark:bg-navy-700" : ""}`}>
+          <Text className={`font-semibold ${tab === "meetings" ? "text-navy-700 dark:text-gold-500" : "text-ink-muted dark:text-ink-mutedDark"}`}>Encuentros</Text>
         </Pressable>
       </View>
 
-      {tab === "members" ? (
+      {tab === "meetings" ? (
+        isMember ? (
+          <MeetingsTab groupId={group.id} />
+        ) : (
+          <Card>
+            <Text className="text-ink-muted dark:text-ink-mutedDark">Únete al grupo para ver y proponer encuentros de estudio.</Text>
+          </Card>
+        )
+      ) : tab === "members" ? (
         <View className="gap-2.5">
           {members.map((m) => (
             <Card key={m.id} className="flex-row items-center gap-3">
@@ -100,7 +126,11 @@ export default function GroupDetailScreen() {
       ) : (
         <View className="gap-2.5">
           {weeklyTests.length === 0 ? (
-            <Card><Text className="text-ink-muted dark:text-ink-mutedDark">Este grupo aún no tiene tests asignados.</Text></Card>
+            <Card>
+              <Text className="text-ink-muted dark:text-ink-mutedDark">
+                {isMember ? "Aún no hay tests para el nivel de este grupo." : "Únete al grupo para ver y resolver sus tests semanales."}
+              </Text>
+            </Card>
           ) : (
             weeklyTests.map((t) => (
               <Card key={t.id} className="flex-row items-center justify-between">

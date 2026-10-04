@@ -33,3 +33,19 @@ export function nuevoEstudiante(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+let contador = 0;
+
+// Crea un estudiante directo en la base (sin pasar por Argon2) y le firma un token de acceso.
+// Sirve para pruebas que necesitan muchos usuarios, como la de concurrencia.
+export async function crearEstudiante(app: import("fastify").FastifyInstance, db: Db, nombre = "Estudiante") {
+  contador += 1;
+  const { rows } = await db.query<{ id: string }>(
+    `INSERT INTO usuarios (correo, password_hash, nombre, carrera, jornada, nivel_ingles)
+     VALUES ($1, 'hash-de-prueba', $2, 'Ingeniería en Informática', 'diurna', 'B1') RETURNING id`,
+    [`estudiante${contador}.${Date.now()}@duocuc.cl`, `${nombre} ${contador}`],
+  );
+  const id = rows[0]!.id;
+  const token = app.jwt.sign({ sub: id, role: "student", type: "access" }, { expiresIn: "15m" });
+  return { id, headers: { authorization: `Bearer ${token}` } };
+}

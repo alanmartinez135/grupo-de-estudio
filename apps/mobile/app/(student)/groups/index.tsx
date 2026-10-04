@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import type { EnglishLevel } from "@grupo-estudio/types";
@@ -19,6 +19,7 @@ export default function GroupsScreen() {
   const createGroup = useAppStore((s) => s.createGroup);
   const joinGroup = useAppStore((s) => s.joinGroup);
   const joinGroupById = useAppStore((s) => s.joinGroupById);
+  const loadGroups = useAppStore((s) => s.loadGroups);
 
   const myGroups = groups.filter((g) => g.memberIds.includes(authUser?.id ?? ""));
   const openGroups = groups.filter((g) => !g.memberIds.includes(authUser?.id ?? "") && g.memberIds.length < MAX_GROUP_MEMBERS);
@@ -31,26 +32,39 @@ export default function GroupsScreen() {
   const [code, setCode] = useState("");
   const [joinError, setJoinError] = useState("");
   const [feedError, setFeedError] = useState("");
+  const [createError, setCreateError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  function handleCreate() {
+  // Al entrar a la pantalla se piden los grupos actualizados al servidor.
+  useEffect(() => {
+    loadGroups().then((r) => setFeedError(r.ok ? "" : r.message));
+  }, [loadGroups]);
+
+  async function handleCreate() {
     if (!name.trim()) return;
-    const group = createGroup(name, description, level);
+    setBusy(true);
+    const result = await createGroup(name, description, level);
+    setBusy(false);
+    if (!result.ok || !result.group) return setCreateError(result.message);
     setCreateOpen(false);
     setName("");
     setDescription("");
-    router.push(`/(student)/groups/${group.id}`);
+    setCreateError("");
+    router.push(`/(student)/groups/${result.group.id}`);
   }
 
-  function handleJoin() {
-    const result = joinGroup(code);
+  async function handleJoin() {
+    setBusy(true);
+    const result = await joinGroup(code);
+    setBusy(false);
     if (!result.ok) return setJoinError(result.message);
     setJoinOpen(false);
     setCode("");
     setJoinError("");
   }
 
-  function handleJoinFromFeed(groupId: string) {
-    const result = joinGroupById(groupId);
+  async function handleJoinFromFeed(groupId: string) {
+    const result = await joinGroupById(groupId);
     setFeedError(result.ok ? "" : result.message);
   }
 
@@ -135,7 +149,8 @@ export default function GroupsScreen() {
             </Pressable>
           ))}
         </View>
-        <Button label="Crear grupo" onPress={handleCreate} fullWidth disabled={!name.trim()} />
+        {createError ? <Text className="text-xs text-red-500 mb-2">{createError}</Text> : null}
+        <Button label="Crear grupo" onPress={handleCreate} loading={busy} fullWidth disabled={!name.trim()} />
       </Modal>
 
       <Modal visible={joinOpen} onClose={() => setJoinOpen(false)} title="Unirse a grupo">
@@ -150,7 +165,7 @@ export default function GroupsScreen() {
           }}
           error={joinError}
         />
-        <Button label="Unirme" onPress={handleJoin} fullWidth disabled={!code.trim()} />
+        <Button label="Unirme" onPress={handleJoin} loading={busy} fullWidth disabled={!code.trim()} />
       </Modal>
     </Screen>
   );

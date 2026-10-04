@@ -7,6 +7,8 @@ import { migrate } from "../db/migrate";
 import { hashPassword } from "../auth/password";
 import { findByCorreo, insertUser } from "../users/repository";
 
+// loadConfig lee apps/api/.env; debe ir antes de consultar las variables SEED_*.
+const config = loadConfig();
 const correo = (process.env.SEED_ADMIN_CORREO ?? "").trim().toLowerCase();
 const password = process.env.SEED_ADMIN_PASSWORD ?? "";
 if (!correo || password.length < 8) {
@@ -14,7 +16,7 @@ if (!correo || password.length < 8) {
   process.exit(1);
 }
 
-const db = createPool(loadConfig().databaseUrl);
+const db = createPool(config.databaseUrl);
 try {
   await migrate(db);
   if (await findByCorreo(db, correo)) {

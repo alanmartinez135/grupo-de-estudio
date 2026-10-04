@@ -1,63 +1,90 @@
-import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import type { TestResult, WeeklyTestDetail } from "@grupo-estudio/types";
 import { Screen } from "@/components/ui/Screen";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/store/useAppStore";
+import { api, errorMessage } from "@/lib/api";
 
 export default function WeeklyTestScreen() {
   const { testId } = useLocalSearchParams<{ testId: string }>();
-  const test = useAppStore((s) => s.weeklyTests.find((t) => t.id === testId));
-  const completeWeeklyTest = useAppStore((s) => s.completeWeeklyTest);
+  const submitWeeklyTest = useAppStore((s) => s.submitWeeklyTest);
+  const [test, setTest] = useState<WeeklyTestDetail | null>(null);
+  const [loadError, setLoadError] = useState("");
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [finished, setFinished] = useState(false);
+  const [result, setResult] = useState<TestResult | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  // El test (sin respuestas correctas) y su estado vienen del servidor.
+  useEffect(() => {
+    if (!testId) return;
+    api.tests
+      .get(testId)
+      .then(setTest)
+      .catch((error) => setLoadError(errorMessage(error)));
+  }, [testId]);
+
+  const backToGroup = () =>
+    test?.groupIds[0] ? router.push(`/(student)/groups/${test.groupIds[0]}`) : router.push("/(student)/groups");
 
   if (!test) {
     return (
       <Screen>
-        <Text className="text-ink-light dark:text-ink-dark">Test no encontrado.</Text>
+        {loadError ? (
+          <Card>
+            <Text className="text-ink-light dark:text-ink-dark">{loadError}</Text>
+          </Card>
+        ) : (
+          <ActivityIndicator className="mt-10" />
+        )}
       </Screen>
     );
   }
 
-  const question = test.questions[step];
-  const isLast = step === test.questions.length - 1;
-
-  function handleNext() {
-    if (isLast) {
-      completeWeeklyTest(test!.id);
-      setFinished(true);
-      return;
-    }
-    setStep((s) => s + 1);
-  }
-
-  if (finished || test.status === "completed") {
-    const correctCount = test.questions.filter((q, i) => answers[q.id] === q.correctIndex).length;
+  if (result || test.status === "completed") {
     return (
       <Screen>
         <Card className="items-center py-8">
           <Text className="text-3xl mb-2">✅</Text>
           <Text className="text-lg font-bold text-ink-light dark:text-ink-dark mb-1">¡Test completado!</Text>
           <Text className="text-ink-muted dark:text-ink-mutedDark text-center mb-5">
-            {finished ? `Respondiste correctamente ${correctCount} de ${test.questions.length} preguntas.` : "Ya habías completado este test."}
+            {result
+              ? `Respondiste correctamente ${result.correct} de ${result.total} preguntas (${result.score} %).`
+              : `Ya habías completado este test. Tu puntaje fue ${test.score} %.`}
           </Text>
-          <Button label="Volver al grupo" onPress={() => router.push(`/(student)/groups/${test.groupId}`)} />
+          <Button label="Volver al grupo" onPress={backToGroup} />
         </Card>
       </Screen>
     );
   }
 
+  const question = test.questions[step]!;
+  const isLast = step === test.questions.length - 1;
+
+  async function handleNext() {
+    if (!isLast) return setStep((s) => s + 1);
+    setSubmitting(true);
+    setSubmitError("");
+    const r = await submitWeeklyTest(test!.id, answers);
+    setSubmitting(false);
+    if (!r.ok || !r.result) return setSubmitError(r.message);
+    setResult(r.result);
+  }
+
   return (
     <Screen>
       <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-xl font-bold text-ink-light dark:text-ink-dark">{test.title}</Text>
+        <Text className="text-xl font-bold text-ink-light dark:text-ink-dark flex-1 pr-2">{test.title}</Text>
         <Badge label={test.skill === "reading" ? "Lectura" : "Escritura"} tone="navy" />
       </View>
-      <Text className="text-ink-muted dark:text-ink-mutedDark mb-5">Pregunta {step + 1} de {test.questions.length}</Text>
+      <Text className="text-ink-muted dark:text-ink-mutedDark mb-5">
+        Pregunta {step + 1} de {test.questions.length} · Nivel {test.level}
+      </Text>
 
       <Card className="mb-5">
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark leading-6">{question.prompt}</Text>
@@ -80,7 +107,14 @@ export default function WeeklyTestScreen() {
         })}
       </View>
 
-      <Button label={isLast ? "Entregar test" : "Siguiente"} onPress={handleNext} disabled={answers[question.id] === undefined} fullWidth />
+      {submitError ? <Text className="text-xs text-red-500 mb-2">{submitError}</Text> : null}
+      <Button
+        label={isLast ? "Entregar test" : "Siguiente"}
+        onPress={handleNext}
+        loading={submitting}
+        disabled={answers[question.id] === undefined}
+        fullWidth
+      />
     </Screen>
   );
 }

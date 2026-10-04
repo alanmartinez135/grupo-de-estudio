@@ -1,4 +1,23 @@
-import type { ApiError, AuthResponse, LoginInput, RegisterInput, User } from "@grupo-estudio/types";
+import type {
+  AdminEvaluation,
+  ApiError,
+  Attendance,
+  AuthResponse,
+  CreateMeetingInput,
+  CreateGroupInput,
+  CreateWeeklyTestInput,
+  DiagnosticResult,
+  DiagnosticTest,
+  GroupWithMembers,
+  LoginInput,
+  Meeting,
+  RegisterInput,
+  Role,
+  TestResult,
+  User,
+  WeeklyTestDetail,
+  WeeklyTestSummary,
+} from "@grupo-estudio/types";
 import { ApiRequestError, sinConexion } from "./errors";
 
 export interface Tokens {
@@ -19,7 +38,7 @@ export interface ApiClientOptions {
 }
 
 interface RequestOptions {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   auth?: boolean; // adjunta el token de acceso y lo renueva si expiró
 }
@@ -137,6 +156,85 @@ export function createApiClient({ baseUrl, tokens, timeoutMs = 10000 }: ApiClien
     users: {
       me: () => request<User>("/usuarios/me", { auth: true }),
       deleteMe: () => request<void>("/usuarios/me", { method: "DELETE", auth: true }),
+    },
+
+    // Solo administradores (el servidor lo verifica en cada solicitud).
+    admin: {
+      users: (filters: { q?: string; role?: Role } = {}) => {
+        const params = new URLSearchParams();
+        if (filters.q?.trim()) params.set("q", filters.q.trim());
+        if (filters.role) params.set("rol", filters.role);
+        const query = params.toString();
+        return request<User[]>(`/usuarios${query ? `?${query}` : ""}`, { auth: true });
+      },
+      setRole: (userId: string, role: Role) =>
+        request<User>(`/usuarios/${encodeURIComponent(userId)}/rol`, { method: "PATCH", body: { role }, auth: true }),
+      deleteUser: (userId: string) =>
+        request<void>(`/usuarios/${encodeURIComponent(userId)}`, { method: "DELETE", auth: true }),
+      evaluations: () => request<AdminEvaluation[]>("/admin/evaluaciones", { auth: true }),
+      createTest: (input: CreateWeeklyTestInput) =>
+        request<AdminEvaluation>("/admin/evaluaciones", { method: "POST", body: input, auth: true }),
+      setPublished: (evaluationId: string, published: boolean) =>
+        request<AdminEvaluation>(`/admin/evaluaciones/${encodeURIComponent(evaluationId)}`, {
+          method: "PATCH",
+          body: { published },
+          auth: true,
+        }),
+      deleteEvaluation: (evaluationId: string) =>
+        request<void>(`/admin/evaluaciones/${encodeURIComponent(evaluationId)}`, { method: "DELETE", auth: true }),
+    },
+
+    groups: {
+      list: () => request<GroupWithMembers[]>("/grupos", { auth: true }),
+      get: (id: string) => request<GroupWithMembers>(`/grupos/${encodeURIComponent(id)}`, { auth: true }),
+      create: (input: CreateGroupInput) =>
+        request<GroupWithMembers>("/grupos", { method: "POST", body: input, auth: true }),
+      joinByCode: (code: string) =>
+        request<GroupWithMembers>("/grupos/unirse", { method: "POST", body: { code }, auth: true }),
+      join: (id: string) =>
+        request<GroupWithMembers>(`/grupos/${encodeURIComponent(id)}/integrantes`, { method: "POST", auth: true }),
+      leave: (id: string) =>
+        request<void>(`/grupos/${encodeURIComponent(id)}/integrantes/me`, { method: "DELETE", auth: true }),
+    },
+
+    diagnostic: {
+      get: () => request<DiagnosticTest>("/diagnostico", { auth: true }),
+      submit: (answers: Record<string, number>) =>
+        request<{ result: DiagnosticResult; user: User }>("/diagnostico/respuestas", {
+          method: "POST",
+          body: { answers },
+          auth: true,
+        }),
+      // null si el estudiante aún no lo rinde
+      result: async (): Promise<DiagnosticResult | null> => {
+        try {
+          return await request<DiagnosticResult>("/diagnostico/resultado", { auth: true });
+        } catch (error) {
+          if (error instanceof ApiRequestError && error.codigo === "SIN_DIAGNOSTICO") return null;
+          throw error;
+        }
+      },
+    },
+
+    meetings: {
+      ofGroup: (groupId: string) => request<Meeting[]>(`/grupos/${encodeURIComponent(groupId)}/encuentros`, { auth: true }),
+      upcoming: () => request<Meeting[]>("/encuentros/proximos", { auth: true }),
+      create: (groupId: string, input: CreateMeetingInput) =>
+        request<Meeting>(`/grupos/${encodeURIComponent(groupId)}/encuentros`, { method: "POST", body: input, auth: true }),
+      respond: (meetingId: string, response: Attendance) =>
+        request<Meeting>(`/encuentros/${encodeURIComponent(meetingId)}/asistencia`, {
+          method: "PUT",
+          body: { response },
+          auth: true,
+        }),
+      cancel: (meetingId: string) => request<void>(`/encuentros/${encodeURIComponent(meetingId)}`, { method: "DELETE", auth: true }),
+    },
+
+    tests: {
+      list: () => request<WeeklyTestSummary[]>("/tests", { auth: true }),
+      get: (id: string) => request<WeeklyTestDetail>(`/tests/${encodeURIComponent(id)}`, { auth: true }),
+      submit: (id: string, answers: Record<string, number>) =>
+        request<TestResult>(`/tests/${encodeURIComponent(id)}/respuestas`, { method: "POST", body: { answers }, auth: true }),
     },
   };
 }
