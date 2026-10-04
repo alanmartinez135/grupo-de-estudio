@@ -1,0 +1,37 @@
+# Desarrollo:  docker compose up -d db        (solo PostgreSQL; la API corre con pnpm)
+# Completo:    docker compose up -d --build   (PostgreSQL + API en contenedores)
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: grupo_estudio
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./apps/api/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d grupo_estudio"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/grupo_estudio
+      JWT_SECRET: ${JWT_SECRET:-solo-desarrollo-cambiar-en-produccion}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8081}
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:

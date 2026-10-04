@@ -39,9 +39,10 @@ Monorepo gestionado con [Turborepo](https://turborepo.dev/) y pnpm.
 ```
 grupo-de-estudio/
 ├── apps/
+│   ├── api/             # API REST (Fastify + PostgreSQL). Backend del proyecto.
 │   └── mobile/          # App Expo (React Native + web). Frontend del proyecto.
 └── packages/
-    ├── types/           # Esquemas y tipos compartidos (Zod): Student, StudyGroup
+    ├── types/           # Esquemas y tipos compartidos (Zod): usuarios, grupos, auth y errores
     ├── api/             # (stub) cliente de API, pendiente de implementar
     ├── core/            # (stub) lógica compartida, pendiente de implementar
     └── i18n/            # (stub) internacionalización con i18next, pendiente
@@ -152,7 +153,59 @@ Todo el estado de la aplicación vive en `store/useAppStore.ts` y parte de los d
 
 ## Backend y comunicación cliente-servidor
 
-Pendiente Alan: describir aquí la arquitectura del servidor, los endpoints, la autenticación y cómo se conectará `apps/mobile` con la API (el paquete `packages/api` está vacío por ahora).
+La API vive en `apps/api`: Node.js con TypeScript y Fastify, base de datos PostgreSQL 16 y despliegue con Docker Compose. Valida las entradas con los mismos esquemas Zod de `packages/types` que usa la app.
+
+### Cómo levantar el backend
+
+Requisitos: Docker Desktop y pnpm.
+
+```sh
+# 1. Variables de entorno (una sola vez)
+copy apps\api\.env.example apps\api\.env      # Windows (en macOS/Linux: cp)
+
+# 2. Base de datos en Docker
+docker compose up -d db
+
+# 3. Dependencias y API en modo desarrollo (aplica el esquema al iniciar)
+pnpm install
+pnpm --filter api dev                          # http://localhost:3000/health
+
+# Opcional: cuenta de administrador (define SEED_ADMIN_PASSWORD en apps/api/.env)
+pnpm --filter api db:seed
+
+# Pruebas automatizadas (requieren la base de Docker)
+pnpm --filter api test
+```
+
+Para levantar todo en contenedores (base y API): `docker compose up -d --build`.
+
+### Endpoints disponibles
+
+Todas las rutas usan el prefijo `/api/v1`. Los errores responden siempre con `{ "error": { "codigo", "mensaje" } }`.
+
+| Método | Ruta              | Acceso        | Descripción                                          |
+| ------ | ----------------- | ------------- | ---------------------------------------------------- |
+| POST   | `/auth/registro`  | Público       | Crea un estudiante (correo `@duocuc.cl`) y entrega tokens |
+| POST   | `/auth/login`     | Público       | Inicia sesión; máximo 5 intentos por minuto          |
+| POST   | `/auth/renovar`   | Público       | Entrega tokens nuevos a partir del token de renovación |
+| GET    | `/usuarios/me`    | Con sesión    | Datos del usuario de la sesión                       |
+| GET    | `/usuarios`       | Administrador | Lista y filtra usuarios (`?q=` y `?rol=`)             |
+| GET    | `/health`         | Público       | Estado de la API y de la base (sin prefijo)          |
+
+### Seguridad
+
+- Contraseñas con hash Argon2id; la base nunca guarda el texto plano.
+- Token de acceso JWT de 15 minutos y token de renovación de 7 días.
+- El rol se verifica en el servidor en cada ruta de administración.
+- El login responde igual si el correo no existe o si la contraseña es incorrecta, para no revelar qué cuentas existen.
+
+### Modelo de datos
+
+El esquema está en `apps/api/db/schema.sql`: tablas `usuarios`, `grupos` y `grupo_integrantes`. Evaluaciones, resultados y mensajes se agregan en los próximos incrementos.
+
+### Pendiente
+
+Endpoints de grupos, evaluaciones y chat, y la conexión de `apps/mobile` con la API (hoy la app sigue usando datos simulados).
 
 ## Estado del proyecto
 

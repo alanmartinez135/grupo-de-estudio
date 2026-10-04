@@ -1,0 +1,30 @@
+{
+  "name": "api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "db:migrate": "tsx src/cli/migrate.ts",
+    "db:seed": "tsx src/cli/seed.ts",
+    "test": "vitest run",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.0.0",
+    "@fastify/jwt": "^9.0.4",
+    "@fastify/rate-limit": "^10.2.2",
+    "@grupo-estudio/types": "workspace:*",
+    "@node-rs/argon2": "^2.0.2",
+    "fastify": "^5.2.1",
+    "pg": "^8.13.1",
+    "tsx": "^4.19.2",
+    "zod": "^4.6.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.11.10",
+    "vitest": "^3.0.5"
+  }
+}
