@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import type { EnglishLevel, Jornada, User } from "@grupo-estudio/types";
 import { api, errorMessage } from "@/lib/api";
-import { MAX_GROUP_MEMBERS } from "@/data/mockData";
 
 import {
   AdminTestDefinition,
@@ -18,7 +17,6 @@ import {
   mockChats,
   mockDiagnosticResult,
   mockFriends,
-  mockGroups,
   mockUsers,
   mockWeeklyTests,
 } from "@/data/mockData";
@@ -62,10 +60,15 @@ interface AppState {
 
   // --- grupos de estudio ---
   groups: StudyGroupUI[];
-  createGroup: (name: string, description: string, level: EnglishLevel) => StudyGroupUI;
-  joinGroup: (code: string) => { ok: boolean; message: string };
-  joinGroupById: (groupId: string) => { ok: boolean; message: string };
-  leaveGroup: (groupId: string) => void;
+  loadGroups: () => Promise<{ ok: boolean; message: string }>;
+  createGroup: (
+    name: string,
+    description: string,
+    level: EnglishLevel,
+  ) => Promise<{ ok: boolean; message: string; group?: StudyGroupUI }>;
+  joinGroup: (code: string) => Promise<{ ok: boolean; message: string }>;
+  joinGroupById: (groupId: string) => Promise<{ ok: boolean; message: string }>;
+  leaveGroup: (groupId: string) => Promise<{ ok: boolean; message: string }>;
 
   
   // --- tests semanales ---
@@ -88,6 +91,13 @@ interface AppState {
 
 // El API entrega el usuario sin contraseña ni color de avatar; mientras el resto de la
 // app siga usando el tipo del prototipo (MockUser), se completa con valores neutros.
+// Reemplaza el grupo actualizado (o lo agrega al inicio si es nuevo).
+function upsertGroup(groups: StudyGroupUI[], group: StudyGroupUI): StudyGroupUI[] {
+  return groups.some((g) => g.id === group.id)
+    ? groups.map((g) => (g.id === group.id ? group : g))
+    : [group, ...groups];
+}
+
 function toAuthUser(user: User): MockUser {
   return { ...user, password: "", avatarColor: "#2E5B8A" };
 }
@@ -127,13 +137,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   logout: async () => {
     await api.auth.logout();
-    set({ authUser: null, activeRole: "student" });
+    set({ authUser: null, activeRole: "student", groups: [] });
   },
   deleteAccount: async () => {
     try {
       await api.users.deleteMe();
       await api.auth.logout();
-      set({ authUser: null, activeRole: "student" });
+      set({ authUser: null, activeRole: "student", groups: [] });
       return { ok: true, message: "Tu cuenta fue eliminada." };
     } catch (error) {
       return { ok: false, message: errorMessage(error) };
@@ -167,43 +177,51 @@ export const useAppStore = create<AppState>((set, get) => ({
   diagnosticResult: mockDiagnosticResult,
   submitDiagnosticTest: () => set({ diagnosticCompleted: true }),
 
-  groups: mockGroups,
-  createGroup: (name, description, level) => {
-    const newGroup: StudyGroupUI = {
-      id: `g-${Date.now()}`,
-      name,
-      description,
-      code: `DUOC-${Math.floor(1000 + Math.random() * 9000)}`,
-      level,
-      createdBy: get().authUser?.id ?? CURRENT_USER_ID,
-      memberIds: [get().authUser?.id ?? CURRENT_USER_ID],
-    };
-    set((s) => ({ groups: [newGroup, ...s.groups] }));
-    return newGroup;
+  // --- grupos de estudio (API: /api/v1/grupos) ---
+  groups: [],
+  loadGroups: async () => {
+    try {
+      set({ groups: await api.groups.list() });
+      return { ok: true, message: "" };
+    } catch (error) {
+      return { ok: false, message: errorMessage(error) };
+    }
   },
-  joinGroup: (code) => {
-    const group = get().groups.find((g) => g.code.toLowerCase() === code.trim().toLowerCase());
-    if (!group) return { ok: false, message: "No existe un grupo con ese código." };
-    return get().joinGroupById(group.id);
+  createGroup: async (name, description, level) => {
+    try {
+      const group = await api.groups.create({ name, description, level });
+      set((s) => ({ groups: [group, ...s.groups.filter((g) => g.id !== group.id)] }));
+      return { ok: true, message: "Grupo creado.", group };
+    } catch (error) {
+      return { ok: false, message: errorMessage(error) };
+    }
   },
-  joinGroupById: (groupId) => {
-    const group = get().groups.find((g) => g.id === groupId);
-    if (!group) return { ok: false, message: "El grupo no existe." };
-    const userId = get().authUser?.id ?? CURRENT_USER_ID;
-    if (group.memberIds.includes(userId)) return { ok: false, message: "Ya perteneces a este grupo." };
-    if (group.memberIds.length >= MAX_GROUP_MEMBERS) return { ok: false, message: "El grupo está lleno." };
-    set((s) => ({
-      groups: s.groups.map((g) => (g.id === group.id ? { ...g, memberIds: [...g.memberIds, userId] } : g)),
-    }));
-    return { ok: true, message: `Te uniste a ${group.name}.` };
+  joinGroup: async (code) => {
+    try {
+      const group = await api.groups.joinByCode(code);
+      set((s) => ({ groups: upsertGroup(s.groups, group) }));
+      return { ok: true, message: `Te uniste a ${group.name}.` };
+    } catch (error) {
+      return { ok: false, message: errorMessage(error) };
+    }
   },
-  leaveGroup: (groupId) => {
-    const userId = get().authUser?.id ?? CURRENT_USER_ID;
-    set((s) => ({
-      groups: s.groups
-        .map((g) => (g.id === groupId ? { ...g, memberIds: g.memberIds.filter((id) => id !== userId) } : g))
-        .filter((g) => g.memberIds.length > 0),
-    }));
+  joinGroupById: async (groupId) => {
+    try {
+      const group = await api.groups.join(groupId);
+      set((s) => ({ groups: upsertGroup(s.groups, group) }));
+      return { ok: true, message: `Te uniste a ${group.name}.` };
+    } catch (error) {
+      return { ok: false, message: errorMessage(error) };
+    }
+  },
+  leaveGroup: async (groupId) => {
+    try {
+      await api.groups.leave(groupId);
+      await get().loadGroups(); // el servidor puede haber eliminado el grupo si quedó vacío
+      return { ok: true, message: "Saliste del grupo." };
+    } catch (error) {
+      return { ok: false, message: errorMessage(error) };
+    }
   },
 
   weeklyTests: mockWeeklyTests,
@@ -245,4 +263,4 @@ export const useAppStore = create<AppState>((set, get) => ({
 }));
 
 // Si el servidor rechaza la sesión y no se puede renovar, se vuelve al login.
-api.setOnSessionExpired(() => useAppStore.setState({ authUser: null, activeRole: "student" }));
+api.setOnSessionExpired(() => useAppStore.setState({ authUser: null, activeRole: "student", groups: [] }));

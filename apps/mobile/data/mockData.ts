@@ -59,8 +59,10 @@ export interface StudyGroupUI {
   description: string;
   code: string;
   level: EnglishLevel;
-  createdBy: string;
+  createdBy: string | null;
   memberIds: string[];
+  // Integrantes con nombre y carrera; los entrega la API (los grupos simulados no los traen).
+  members?: { id: string; name: string; career: string }[];
 }
 
 export interface ChatMessage {

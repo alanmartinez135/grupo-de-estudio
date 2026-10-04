@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { View } from "react-native";
 import { Redirect, Stack } from "expo-router";
 import { useAppStore } from "@/store/useAppStore";
@@ -16,6 +17,11 @@ export default function StudentLayout() {
   const authUser = useAppStore((s) => s.authUser);
   const theme = useAppStore((s) => s.theme);
   const sessionChecked = useAppStore((s) => s.sessionChecked);
+  const loadGroups = useAppStore((s) => s.loadGroups);
+
+  useEffect(() => {
+    if (authUser) loadGroups();
+  }, [authUser, loadGroups]);
 
   if (!sessionChecked) return null;
   if (!authUser) return <Redirect href="/(auth)/login" />;
