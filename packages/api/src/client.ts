@@ -1,4 +1,12 @@
-import type { ApiError, AuthResponse, LoginInput, RegisterInput, User } from "@grupo-estudio/types";
+import type {
+  ApiError,
+  AuthResponse,
+  CreateGroupInput,
+  GroupWithMembers,
+  LoginInput,
+  RegisterInput,
+  User,
+} from "@grupo-estudio/types";
 import { ApiRequestError, sinConexion } from "./errors";
 
 export interface Tokens {
@@ -137,6 +145,19 @@ export function createApiClient({ baseUrl, tokens, timeoutMs = 10000 }: ApiClien
     users: {
       me: () => request<User>("/usuarios/me", { auth: true }),
       deleteMe: () => request<void>("/usuarios/me", { method: "DELETE", auth: true }),
+    },
+
+    groups: {
+      list: () => request<GroupWithMembers[]>("/grupos", { auth: true }),
+      get: (id: string) => request<GroupWithMembers>(`/grupos/${encodeURIComponent(id)}`, { auth: true }),
+      create: (input: CreateGroupInput) =>
+        request<GroupWithMembers>("/grupos", { method: "POST", body: input, auth: true }),
+      joinByCode: (code: string) =>
+        request<GroupWithMembers>("/grupos/unirse", { method: "POST", body: { code }, auth: true }),
+      join: (id: string) =>
+        request<GroupWithMembers>(`/grupos/${encodeURIComponent(id)}/integrantes`, { method: "POST", auth: true }),
+      leave: (id: string) =>
+        request<void>(`/grupos/${encodeURIComponent(id)}/integrantes/me`, { method: "DELETE", auth: true }),
     },
   };
 }

@@ -188,6 +188,12 @@ Todas las rutas usan el prefijo `/api/v1`. Los errores responden siempre con `{ 
 | GET    | `/usuarios/me`    | Con sesión    | Datos del usuario de la sesión                       |
 | DELETE | `/usuarios/me`    | Con sesión    | Elimina la cuenta y sus datos                        |
 | GET    | `/usuarios`       | Administrador | Lista y filtra usuarios (`?q=` y `?rol=`)             |
+| GET    | `/grupos`         | Con sesión    | Lista los grupos con sus integrantes                 |
+| POST   | `/grupos`         | Con sesión    | Crea un grupo (código `DUOC-####`); el creador queda como integrante |
+| GET    | `/grupos/:id`     | Con sesión    | Detalle de un grupo                                  |
+| POST   | `/grupos/unirse`  | Con sesión    | Unirse con el código de invitación                   |
+| POST   | `/grupos/:id/integrantes` | Con sesión | Unirse desde el listado (máximo 6 integrantes)   |
+| DELETE | `/grupos/:id/integrantes/me` | Con sesión | Abandonar el grupo; si queda vacío, se elimina |
 | GET    | `/health`         | Público       | Estado de la API y de la base (sin prefijo)          |
 
 ### Seguridad
@@ -196,6 +202,7 @@ Todas las rutas usan el prefijo `/api/v1`. Los errores responden siempre con `{ 
 - Token de acceso JWT de 15 minutos y token de renovación de 7 días.
 - El rol se verifica en el servidor en cada ruta de administración.
 - El login responde igual si el correo no existe o si la contraseña es incorrecta, para no revelar qué cuentas existen.
+- El cupo de 6 integrantes se controla en una transacción que bloquea el grupo (`SELECT … FOR UPDATE`): aunque varias personas intenten unirse a la vez, nadie supera el límite.
 
 ### Modelo de datos
 
@@ -203,7 +210,7 @@ El esquema está en `apps/api/db/schema.sql`: tablas `usuarios`, `grupos` y `gru
 
 ### Conexión de la app con la API
 
-`packages/api` es el cliente HTTP que usa la app: adjunta el token, lo renueva cuando vence y entrega los errores con su mensaje. Hoy están conectados el **registro, el inicio de sesión, el cierre de sesión y la eliminación de cuenta**; el resto de la app sigue con datos simulados.
+`packages/api` es el cliente HTTP que usa la app: adjunta el token, lo renueva cuando vence y entrega los errores con su mensaje. Hoy están conectados el **registro, el inicio de sesión, el cierre de sesión, la eliminación de cuenta y los grupos de estudio**; la evaluación diagnóstica, los tests semanales, el chat y la administración siguen con datos simulados.
 
 ```sh
 copy apps\mobile\.env.example apps\mobile\.env   # Windows (en macOS/Linux: cp)
@@ -213,7 +220,7 @@ En `apps/mobile/.env`, `EXPO_PUBLIC_API_URL` apunta a `http://localhost:3000` pa
 
 ### Pendiente
 
-Endpoints de grupos, evaluaciones y chat, y su conexión con la app.
+Endpoints de evaluaciones (diagnóstica y tests semanales), chat y administración de usuarios, y su conexión con la app.
 
 ## Estado del proyecto
 
