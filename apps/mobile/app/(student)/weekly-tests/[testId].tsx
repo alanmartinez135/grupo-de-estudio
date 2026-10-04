@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/store/useAppStore";
 import { api, errorMessage } from "@/lib/api";
+import { useT } from "@/lib/useT";
 
 export default function WeeklyTestScreen() {
   const { testId } = useLocalSearchParams<{ testId: string }>();
+  const t = useT();
   const submitWeeklyTest = useAppStore((s) => s.submitWeeklyTest);
   const [test, setTest] = useState<WeeklyTestDetail | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -51,13 +53,13 @@ export default function WeeklyTestScreen() {
       <Screen>
         <Card className="items-center py-8">
           <Text className="text-3xl mb-2">✅</Text>
-          <Text className="text-lg font-bold text-ink-light dark:text-ink-dark mb-1">¡Test completado!</Text>
+          <Text className="text-lg font-bold text-ink-light dark:text-ink-dark mb-1">{t("test.doneTitle")}</Text>
           <Text className="text-ink-muted dark:text-ink-mutedDark text-center mb-5">
             {result
-              ? `Respondiste correctamente ${result.correct} de ${result.total} preguntas (${result.score} %).`
-              : `Ya habías completado este test. Tu puntaje fue ${test.score} %.`}
+              ? t("test.doneResult", { correct: result.correct, total: result.total, score: result.score })
+              : t("test.alreadyDone", { score: test.score ?? 0 })}
           </Text>
-          <Button label="Volver al grupo" onPress={backToGroup} />
+          <Button label={t("test.backToGroup")} onPress={backToGroup} />
         </Card>
       </Screen>
     );
@@ -80,10 +82,10 @@ export default function WeeklyTestScreen() {
     <Screen>
       <View className="flex-row items-center justify-between mb-4">
         <Text className="text-xl font-bold text-ink-light dark:text-ink-dark flex-1 pr-2">{test.title}</Text>
-        <Badge label={test.skill === "reading" ? "Lectura" : "Escritura"} tone="navy" />
+        <Badge label={test.skill === "reading" ? t("common.reading") : t("common.writing")} tone="navy" />
       </View>
       <Text className="text-ink-muted dark:text-ink-mutedDark mb-5">
-        Pregunta {step + 1} de {test.questions.length} · Nivel {test.level}
+        {t("test.progress", { n: step + 1, total: test.questions.length, level: test.level })}
       </Text>
 
       <Card className="mb-5">
@@ -109,7 +111,7 @@ export default function WeeklyTestScreen() {
 
       {submitError ? <Text className="text-xs text-red-500 mb-2">{submitError}</Text> : null}
       <Button
-        label={isLast ? "Entregar test" : "Siguiente"}
+        label={isLast ? t("test.submit") : t("common.next")}
         onPress={handleNext}
         loading={submitting}
         disabled={answers[question.id] === undefined}

@@ -6,9 +6,11 @@ import { Card } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/Input";
 import { useAppStore } from "@/store/useAppStore";
+import { useT } from "@/lib/useT";
 
 export default function ChatListScreen() {
   const friends = useAppStore((s) => s.friends);
+  const t = useT();
   const chats = useAppStore((s) => s.chats);
   const addFriend = useAppStore((s) => s.addFriend);
   const [query, setQuery] = useState("");
@@ -18,19 +20,19 @@ export default function ChatListScreen() {
 
   return (
     <Screen>
-      <Text className="text-2xl font-bold text-ink-light dark:text-ink-dark mb-4">Comunidad</Text>
-      <Input label="Buscar personas" placeholder="Buscar por nombre..." value={query} onChangeText={setQuery} />
+      <Text className="text-2xl font-bold text-ink-light dark:text-ink-dark mb-4">{t("chat.title")}</Text>
+      <Input label={t("chat.search")} placeholder={t("chat.searchPlaceholder")} value={query} onChangeText={setQuery} />
 
       {exactNoMatch && (
         <Card className="mb-4 flex-row items-center justify-between">
-          <Text className="text-ink-muted dark:text-ink-mutedDark flex-1 pr-3">Sin resultados para "{query}"</Text>
+          <Text className="text-ink-muted dark:text-ink-mutedDark flex-1 pr-3">{t("chat.noResults", { query })}</Text>
           <Pressable onPress={() => { addFriend(query); setQuery(""); }} className="bg-gold-500 rounded-full px-4 py-2">
-            <Text className="text-navy-800 font-semibold text-sm">+ Agregar</Text>
+            <Text className="text-navy-800 font-semibold text-sm">{t("chat.add")}</Text>
           </Pressable>
         </Card>
       )}
 
-      <Text className="text-sm font-semibold text-ink-muted dark:text-ink-mutedDark mb-3">MIS AMIGOS</Text>
+      <Text className="text-sm font-semibold text-ink-muted dark:text-ink-mutedDark mb-3">{t("chat.friends")}</Text>
       <View className="gap-2.5">
         {filtered.map((f) => {
           const lastMessage = chats[f.id]?.[chats[f.id].length - 1];

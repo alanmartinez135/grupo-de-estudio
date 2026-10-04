@@ -8,6 +8,8 @@ import type {
   WeeklyTestSummary,
 } from "@grupo-estudio/types";
 import { api, errorMessage } from "@/lib/api";
+import { setCurrentLanguage, tr } from "@/lib/i18n";
+import { loadPreferences, savePreferences } from "@/lib/preferences";
 
 import {
   ChatMessage,
@@ -53,6 +55,7 @@ interface AppState {
   toggleTheme: () => void;
   language: Language;
   setLanguage: (lang: Language) => void;
+  loadPreferences: () => Promise<void>;
 
   // --- diagnóstico (API: /api/v1/diagnostico) ---
   diagnosticCompleted: boolean;
@@ -123,7 +126,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const user = await api.auth.login({ correo, password });
       set({ authUser: toAuthUser(user), activeRole: user.role });
-      return { ok: true, message: "Bienvenido/a de vuelta." };
+      return { ok: true, message: "" };
     } catch (error) {
       return { ok: false, message: errorMessage(error) };
     }
@@ -132,7 +135,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const user = await api.auth.register(data);
       set({ authUser: toAuthUser(user), activeRole: user.role });
-      return { ok: true, message: "Cuenta creada correctamente." };
+      return { ok: true, message: "" };
     } catch (error) {
       return { ok: false, message: errorMessage(error) };
     }
@@ -146,7 +149,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       await api.users.deleteMe();
       await api.auth.logout();
       set({ authUser: null, activeRole: "student", groups: [], weeklyTests: [], diagnosticResult: null, diagnosticCompleted: false });
-      return { ok: true, message: "Tu cuenta fue eliminada." };
+      return { ok: true, message: "" };
     } catch (error) {
       return { ok: false, message: errorMessage(error) };
     }
@@ -154,9 +157,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   resetRequested: null,
   requestPasswordReset: (correo) => {
     const found = get().users.find((u) => u.correo.toLowerCase() === correo.trim().toLowerCase());
-    if (!found) return { ok: false, message: "No encontramos una cuenta con ese correo." };
+    if (!found) return { ok: false, message: tr("forgot.notFound") };
     set({ resetRequested: correo });
-    return { ok: true, message: "Te hemos enviado un correo para restablecer tu contraseña." };
+    return { ok: true, message: tr("forgot.sentBody") };
   },
   resetPassword: (newPassword) => {
     const correo = get().resetRequested;
@@ -171,9 +174,22 @@ export const useAppStore = create<AppState>((set, get) => ({
   setActiveRole: (role) => set({ activeRole: role }),
 
   theme: "light",
-  toggleTheme: () => set((s) => ({ theme: s.theme === "light" ? "dark" : "light" })),
+  toggleTheme: () => {
+    const theme = get().theme === "light" ? "dark" : "light";
+    set({ theme });
+    savePreferences({ theme, language: get().language });
+  },
   language: "es",
-  setLanguage: (language) => set({ language }),
+  setLanguage: (language) => {
+    setCurrentLanguage(language);
+    set({ language });
+    savePreferences({ language, theme: get().theme });
+  },
+  loadPreferences: async () => {
+    const prefs = await loadPreferences();
+    if (prefs.language) setCurrentLanguage(prefs.language);
+    set((s) => ({ language: prefs.language ?? s.language, theme: prefs.theme ?? s.theme }));
+  },
 
   diagnosticCompleted: false,
   diagnosticResult: null,
@@ -215,7 +231,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const group = await api.groups.create({ name, description, level });
       set((s) => ({ groups: [group, ...s.groups.filter((g) => g.id !== group.id)] }));
       get().loadWeeklyTests();
-      return { ok: true, message: "Grupo creado.", group };
+      return { ok: true, message: tr("groups.created"), group };
     } catch (error) {
       return { ok: false, message: errorMessage(error) };
     }
@@ -225,7 +241,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const group = await api.groups.joinByCode(code);
       set((s) => ({ groups: upsertGroup(s.groups, group) }));
       get().loadWeeklyTests();
-      return { ok: true, message: `Te uniste a ${group.name}.` };
+      return { ok: true, message: tr("groups.joined", { name: group.name }) };
     } catch (error) {
       return { ok: false, message: errorMessage(error) };
     }
@@ -235,7 +251,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const group = await api.groups.join(groupId);
       set((s) => ({ groups: upsertGroup(s.groups, group) }));
       get().loadWeeklyTests();
-      return { ok: true, message: `Te uniste a ${group.name}.` };
+      return { ok: true, message: tr("groups.joined", { name: group.name }) };
     } catch (error) {
       return { ok: false, message: errorMessage(error) };
     }
@@ -245,7 +261,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       await api.groups.leave(groupId);
       await get().loadGroups(); // el servidor puede haber eliminado el grupo si quedó vacío
       get().loadWeeklyTests();
-      return { ok: true, message: "Saliste del grupo." };
+      return { ok: true, message: tr("groups.left") };
     } catch (error) {
       return { ok: false, message: errorMessage(error) };
     }

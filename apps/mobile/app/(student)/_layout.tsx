@@ -4,13 +4,14 @@ import { Redirect, Stack } from "expo-router";
 import { useAppStore } from "@/store/useAppStore";
 import { AppHeader } from "@/components/AppHeader";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
+import type { TKey } from "@/lib/i18n";
 
-const navItems = [
-  { label: "Inicio", href: "/(student)/dashboard" },
-  { label: "Evaluación diagnóstica", href: "/(student)/diagnostic-test" },
-  { label: "Grupos", href: "/(student)/groups" },
-  { label: "Comunidad", href: "/(student)/chat" },
-  { label: "Ajustes", href: "/(student)/settings" },
+const navItems: { labelKey: TKey; href: string }[] = [
+  { labelKey: "nav.dashboard", href: "/(student)/dashboard" },
+  { labelKey: "nav.diagnostic", href: "/(student)/diagnostic-test" },
+  { labelKey: "nav.groups", href: "/(student)/groups" },
+  { labelKey: "nav.community", href: "/(student)/chat" },
+  { labelKey: "nav.settings", href: "/(student)/settings" },
 ];
 
 export default function StudentLayout() {

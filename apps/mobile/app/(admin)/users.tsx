@@ -11,10 +11,12 @@ import { Modal } from "@/components/ui/Modal";
 import { Avatar } from "@/components/ui/Avatar";
 import { useAppStore } from "@/store/useAppStore";
 import { api, errorMessage } from "@/lib/api";
+import { useT } from "@/lib/useT";
 
 // Las cuentas se crean desde el registro de la app; el administrador gestiona roles y eliminaciones.
 export default function AdminUsersScreen() {
   const authUser = useAppStore((s) => s.authUser);
+  const t = useT();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,9 +86,9 @@ export default function AdminUsersScreen() {
 
   return (
     <Screen>
-      <Text className="text-2xl font-bold text-ink-light dark:text-ink-dark mb-5">Gestión de usuarios</Text>
+      <Text className="text-2xl font-bold text-ink-light dark:text-ink-dark mb-5">{t("admin.usersTitle")}</Text>
 
-      <Input label="Buscar por nombre o correo" placeholder="Buscar..." value={query} onChangeText={setQuery} />
+      <Input label={t("admin.search")} placeholder={t("admin.searchPlaceholder")} value={query} onChangeText={setQuery} />
 
       <View className="flex-row gap-2 mb-4 -mt-1">
         {(["all", "student", "admin"] as const).map((r) => (
@@ -96,7 +98,7 @@ export default function AdminUsersScreen() {
             className={`px-4 py-2 rounded-full ${roleFilter === r ? "bg-navy-700" : "bg-navy-50 dark:bg-navy-800"}`}
           >
             <Text className={`text-sm font-semibold ${roleFilter === r ? "text-white" : "text-ink-muted dark:text-ink-mutedDark"}`}>
-              {r === "all" ? "Todos" : r === "admin" ? "Administradores" : "Alumnos"}
+              {r === "all" ? t("admin.all") : r === "admin" ? t("admin.admins") : t("admin.students")}
             </Text>
           </Pressable>
         ))}
@@ -116,7 +118,7 @@ export default function AdminUsersScreen() {
                 <View className="flex-1">
                   <Text className="font-semibold text-ink-light dark:text-ink-dark">
                     {u.name}
-                    {isMe ? " (tú)" : ""}
+                    {isMe ? t("admin.you") : ""}
                   </Text>
                   <Text className="text-xs text-ink-muted dark:text-ink-mutedDark">
                     {u.correo} · {u.englishLevel}
@@ -126,7 +128,7 @@ export default function AdminUsersScreen() {
                   <ActivityIndicator />
                 ) : (
                   <Pressable disabled={isMe} onPress={() => toggleRole(u)} style={{ opacity: isMe ? 0.6 : 1 }}>
-                    <Badge label={u.role === "admin" ? "Admin" : "Alumno"} tone={u.role === "admin" ? "gold" : "navy"} />
+                    <Badge label={u.role === "admin" ? t("role.admin") : t("role.student")} tone={u.role === "admin" ? "gold" : "navy"} />
                   </Pressable>
                 )}
                 {!isMe && (
@@ -145,25 +147,23 @@ export default function AdminUsersScreen() {
           })}
           {users.length === 0 && (
             <Card>
-              <Text className="text-ink-muted dark:text-ink-mutedDark text-center">Sin resultados.</Text>
+              <Text className="text-ink-muted dark:text-ink-mutedDark text-center">{t("admin.noResults")}</Text>
             </Card>
           )}
         </View>
       )}
       <Text className="text-xs text-ink-muted dark:text-ink-mutedDark mt-3 text-center">
-        Toca la etiqueta de rol para cambiarla entre Alumno y Administrador. Se muestran hasta 100 cuentas; usa la búsqueda
-        para encontrar otras.
+        {t("admin.usersHint")}
       </Text>
 
-      <Modal visible={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="¿Eliminar usuario?">
+      <Modal visible={!!confirmDelete} onClose={() => setConfirmDelete(null)} title={t("admin.deleteUserTitle")}>
         <Text className="text-ink-light dark:text-ink-dark mb-5">
-          Se eliminará la cuenta de {confirmDelete?.name} junto con sus resultados y su participación en grupos. Esta acción no
-          se puede deshacer.
+          {t("admin.deleteUserBody", { name: confirmDelete?.name ?? "" })}
         </Text>
         {deleteError ? <Text className="text-red-600 text-sm mb-4">{deleteError}</Text> : null}
         <View className="flex-row gap-3">
-          <Button label="Cancelar" variant="outline" fullWidth onPress={() => setConfirmDelete(null)} />
-          <Button label="Eliminar" variant="danger" fullWidth loading={deleting} onPress={handleDelete} />
+          <Button label={t("common.cancel")} variant="outline" fullWidth onPress={() => setConfirmDelete(null)} />
+          <Button label={t("common.delete")} variant="danger" fullWidth loading={deleting} onPress={handleDelete} />
         </View>
       </Modal>
     </Screen>

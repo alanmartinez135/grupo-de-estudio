@@ -1,4 +1,4 @@
-import { Image, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -12,10 +12,25 @@ export function AuthShell({
   children: React.ReactNode;
 }) {
   const dark = useAppStore((s) => s.theme === "dark");
+  const language = useAppStore((s) => s.language);
+  const setLanguage = useAppStore((s) => s.setLanguage);
 
   return (
     <View className={`flex-1 ${dark ? "bg-navy-900" : "bg-navy-700"}`}>
       <SafeAreaView className="flex-1">
+        {/* Selector de idioma, visible antes de iniciar sesión */}
+        <View className="flex-row self-end mr-5 mt-2 rounded-full bg-navy-800 p-1">
+          {(["es", "en"] as const).map((lang) => (
+            <Pressable
+              key={lang}
+              onPress={() => setLanguage(lang)}
+              accessibilityLabel={lang === "es" ? "Español" : "English"}
+              className={`rounded-full px-3 py-1 ${language === lang ? "bg-gold-500" : ""}`}
+            >
+              <Text className={`text-xs font-bold ${language === lang ? "text-navy-800" : "text-white"}`}>{lang.toUpperCase()}</Text>
+            </Pressable>
+          ))}
+        </View>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           className="flex-1"
@@ -72,4 +87,4 @@ export function AuthShell({
       </SafeAreaView>
     </View>
   );
-}
+}

@@ -3,10 +3,11 @@ import { Redirect, Stack } from "expo-router";
 import { useAppStore } from "@/store/useAppStore";
 import { AppHeader } from "@/components/AppHeader";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
+import type { TKey } from "@/lib/i18n";
 
-const navItems = [
-  { label: "Usuarios", href: "/(admin)/users" },
-  { label: "Evaluaciones", href: "/(admin)/tests" },
+const navItems: { labelKey: TKey; href: string }[] = [
+  { labelKey: "nav.users", href: "/(admin)/users" },
+  { labelKey: "nav.tests", href: "/(admin)/tests" },
 ];
 
 export default function AdminLayout() {

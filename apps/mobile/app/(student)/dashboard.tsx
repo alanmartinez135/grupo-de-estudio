@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/store/useAppStore";
 import { api } from "@/lib/api";
 import { formatMeetingDate } from "@/components/MeetingsTab";
+import { useT } from "@/lib/useT";
 
 export default function DashboardScreen() {
   const authUser = useAppStore((s) => s.authUser);
+  const t = useT();
   const diagnosticCompleted = useAppStore((s) => s.diagnosticCompleted);
   const groups = useAppStore((s) => s.groups);
   const weeklyTests = useAppStore((s) => s.weeklyTests);
@@ -29,36 +31,36 @@ export default function DashboardScreen() {
 
   return (
     <Screen>
-      <Text className="text-2xl font-bold text-ink-light dark:text-ink-dark mb-1">Hola, {authUser?.name.split(" ")[0]} 👋</Text>
-      <Text className="text-ink-muted dark:text-ink-mutedDark mb-6">Este es tu resumen de la semana.</Text>
+      <Text className="text-2xl font-bold text-ink-light dark:text-ink-dark mb-1">{t("dash.hello", { name: authUser?.name.split(" ")[0] ?? "" })}</Text>
+      <Text className="text-ink-muted dark:text-ink-mutedDark mb-6">{t("dash.subtitle")}</Text>
 
       {!diagnosticCompleted && (
         <Card className="mb-4 bg-navy-700">
-          <Text className="text-white font-bold text-base mb-1">Aún no rindes tu evaluación diagnóstica</Text>
-          <Text className="text-navy-100 mb-4">Complétala para conocer tu nivel de inglés y recibir recomendaciones personalizadas.</Text>
-          <Button label="Rendir evaluación" variant="secondary" onPress={() => router.push("/(student)/diagnostic-test")} />
+          <Text className="text-white font-bold text-base mb-1">{t("dash.diagTitle")}</Text>
+          <Text className="text-navy-100 mb-4">{t("dash.diagBody")}</Text>
+          <Button label={t("dash.diagButton")} variant="secondary" onPress={() => router.push("/(student)/diagnostic-test")} />
         </Card>
       )}
 
       <View className="flex-row flex-wrap gap-3 mb-4">
         <Card className="flex-1 min-w-[140px]">
           <Text className="text-3xl font-extrabold text-navy-700 dark:text-gold-500">{myGroups.length}</Text>
-          <Text className="text-ink-muted dark:text-ink-mutedDark mt-1">Grupos de estudio</Text>
+          <Text className="text-ink-muted dark:text-ink-mutedDark mt-1">{t("dash.groups")}</Text>
         </Card>
         <Card className="flex-1 min-w-[140px]">
           <Text className="text-3xl font-extrabold text-navy-700 dark:text-gold-500">{pendingTests.length}</Text>
-          <Text className="text-ink-muted dark:text-ink-mutedDark mt-1">Tests pendientes</Text>
+          <Text className="text-ink-muted dark:text-ink-mutedDark mt-1">{t("dash.pendingTests")}</Text>
         </Card>
         <Card className="flex-1 min-w-[140px]">
           <Text className="text-3xl font-extrabold text-navy-700 dark:text-gold-500">{authUser?.englishLevel}</Text>
-          <Text className="text-ink-muted dark:text-ink-mutedDark mt-1">Nivel actual</Text>
+          <Text className="text-ink-muted dark:text-ink-mutedDark mt-1">{t("dash.level")}</Text>
         </Card>
       </View>
 
-      <Text className="text-lg font-bold text-ink-light dark:text-ink-dark mb-3">Próximos encuentros</Text>
+      <Text className="text-lg font-bold text-ink-light dark:text-ink-dark mb-3">{t("dash.upcoming")}</Text>
       {meetings.length === 0 ? (
         <Card className="mb-4">
-          <Text className="text-ink-muted dark:text-ink-mutedDark">No tienes encuentros programados. Puedes proponer uno desde tus grupos.</Text>
+          <Text className="text-ink-muted dark:text-ink-mutedDark">{t("dash.noMeetings")}</Text>
         </Card>
       ) : (
         meetings.slice(0, 3).map((m) => (
@@ -66,7 +68,7 @@ export default function DashboardScreen() {
             <Card className="mb-3">
               <View className="flex-row justify-between items-start mb-1">
                 <Text className="flex-1 pr-2 font-semibold text-ink-light dark:text-ink-dark">{m.topic}</Text>
-                <Badge label={m.myResponse === "yes" ? "Asistiré" : m.myResponse === "no" ? "No asistiré" : "Sin responder"} tone={m.myResponse === "yes" ? "success" : "gold"} />
+                <Badge label={m.myResponse === "yes" ? t("meet.yes") : m.myResponse === "no" ? t("meet.no") : t("meet.noAnswer")} tone={m.myResponse === "yes" ? "success" : "gold"} />
               </View>
               <Text className="text-sm text-ink-muted dark:text-ink-mutedDark">
                 {m.groupName} · {formatMeetingDate(m.startsAt)}
@@ -76,20 +78,20 @@ export default function DashboardScreen() {
         ))
       )}
 
-      <Text className="text-lg font-bold text-ink-light dark:text-ink-dark mb-3 mt-2">Tests semanales pendientes</Text>
+      <Text className="text-lg font-bold text-ink-light dark:text-ink-dark mb-3 mt-2">{t("dash.weeklyPending")}</Text>
       {pendingTests.length === 0 ? (
         <Card>
-          <Text className="text-ink-muted dark:text-ink-mutedDark">No tienes tests pendientes. ¡Vas al día! 🎉</Text>
+          <Text className="text-ink-muted dark:text-ink-mutedDark">{t("dash.noTests")}</Text>
         </Card>
       ) : (
-        pendingTests.map((t) => (
-          <Card key={t.id} className="mb-3">
+        pendingTests.map((test) => (
+          <Card key={test.id} className="mb-3">
             <View className="flex-row justify-between items-start">
               <View className="flex-1 pr-3">
-                <Text className="font-semibold text-ink-light dark:text-ink-dark mb-1">{t.title}</Text>
-                <Badge label={t.skill === "reading" ? "Lectura" : "Escritura"} tone="navy" />
+                <Text className="font-semibold text-ink-light dark:text-ink-dark mb-1">{test.title}</Text>
+                <Badge label={test.skill === "reading" ? t("common.reading") : t("common.writing")} tone="navy" />
               </View>
-              <Button label="Resolver" size="sm" onPress={() => router.push(`/(student)/weekly-tests/${t.id}`)} />
+              <Button label={t("common.solve")} size="sm" onPress={() => router.push(`/(student)/weekly-tests/${test.id}`)} />
             </View>
           </Card>
         ))

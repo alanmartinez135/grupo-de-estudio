@@ -5,9 +5,11 @@ import { AuthShell } from "@/components/AuthShell";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/store/useAppStore";
+import { useT } from "@/lib/useT";
 
 export default function LoginScreen() {
   const login = useAppStore((s) => s.login);
+  const t = useT();
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -23,17 +25,17 @@ export default function LoginScreen() {
   }
 
   return (
-    <AuthShell title="Iniciar sesión" subtitle="Ingresa con tu correo institucional Duoc UC">
-      <Input label="Correo institucional" placeholder="nombre.apellido@duocuc.cl" autoCapitalize="none" keyboardType="email-address" value={correo} onChangeText={setCorreo} />
-      <Input label="Contraseña" placeholder="••••••••" secureTextEntry value={password} onChangeText={setPassword} error={error} />
+    <AuthShell title={t("login.title")} subtitle={t("login.subtitle")}>
+      <Input label={t("common.email")} placeholder={t("common.emailPlaceholder")} autoCapitalize="none" keyboardType="email-address" value={correo} onChangeText={setCorreo} />
+      <Input label={t("common.password")} placeholder="••••••••" secureTextEntry value={password} onChangeText={setPassword} error={error} />
       <Link href="/(auth)/forgot-password" className="mb-5">
-        <Text className="text-navy-700 dark:text-gold-500 text-sm font-semibold">Olvidé mi contraseña</Text>
+        <Text className="text-navy-700 dark:text-gold-500 text-sm font-semibold">{t("login.forgot")}</Text>
       </Link>
-      <Button label="Ingresar" onPress={handleLogin} loading={loading} disabled={!correo || !password} fullWidth />
+      <Button label={t("login.submit")} onPress={handleLogin} loading={loading} disabled={!correo || !password} fullWidth />
       <View className="flex-row justify-center mt-5">
-        <Text className="text-ink-muted dark:text-ink-mutedDark">¿No tienes cuenta? </Text>
+        <Text className="text-ink-muted dark:text-ink-mutedDark">{t("login.noAccount")}</Text>
         <Link href="/(auth)/register">
-          <Text className="text-navy-700 dark:text-gold-500 font-semibold">Regístrate</Text>
+          <Text className="text-navy-700 dark:text-gold-500 font-semibold">{t("login.register")}</Text>
         </Link>
       </View>
     </AuthShell>

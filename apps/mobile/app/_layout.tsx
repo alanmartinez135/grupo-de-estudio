@@ -20,6 +20,7 @@ export default function RootLayout() {
   });
   const theme = useAppStore((s) => s.theme);
   const restoreSession = useAppStore((s) => s.restoreSession);
+  const loadPreferences = useAppStore((s) => s.loadPreferences);
 
   useEffect(() => {
     if (error) throw error;
@@ -33,6 +34,11 @@ export default function RootLayout() {
   useEffect(() => {
     restoreSession();
   }, [restoreSession]);
+
+  // Idioma y tema elegidos la última vez.
+  useEffect(() => {
+    loadPreferences();
+  }, [loadPreferences]);
 
   // Sincroniza el toggle claro/oscuro del store con las variantes `dark:` de NativeWind.
   useEffect(() => {

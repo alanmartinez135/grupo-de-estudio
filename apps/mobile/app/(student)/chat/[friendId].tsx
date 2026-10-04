@@ -4,9 +4,11 @@ import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "@/components/ui/Avatar";
 import { useAppStore } from "@/store/useAppStore";
+import { useT } from "@/lib/useT";
 
 export default function ChatConversationScreen() {
   const { friendId } = useLocalSearchParams<{ friendId: string }>();
+  const t = useT();
   const friend = useAppStore((s) => s.friends.find((f) => f.id === friendId));
   const messages = useAppStore((s) => s.chats[friendId as string] ?? []);
   const sendMessage = useAppStore((s) => s.sendMessage);
@@ -29,7 +31,7 @@ export default function ChatConversationScreen() {
         <Avatar name={friend?.name ?? "?"} color={friend?.avatarColor} size={36} />
         <View>
           <Text className="text-white font-semibold">{friend?.name}</Text>
-          <Text className="text-navy-100 text-xs">{friend?.online ? "En línea" : "Desconectado"}</Text>
+          <Text className="text-navy-100 text-xs">{friend?.online ? t("chat.online") : t("chat.offline")}</Text>
         </View>
       </View>
 
@@ -52,7 +54,7 @@ export default function ChatConversationScreen() {
           <TextInput
             value={text}
             onChangeText={setText}
-            placeholder="Escribe un mensaje..."
+            placeholder={t("chat.placeholder")}
             placeholderTextColor={dark ? "#5B6B85" : "#9AA8C2"}
             className={`flex-1 rounded-full px-4 py-2.5 border ${dark ? "border-navy-600 bg-surface-cardDark text-ink-dark" : "border-navy-100 bg-white text-ink-light"}`}
             onSubmitEditing={handleSend}

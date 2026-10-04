@@ -10,11 +10,13 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { useAppStore } from "@/store/useAppStore";
 import { MAX_GROUP_MEMBERS } from "@/data/mockData";
+import { useT } from "@/lib/useT";
 
 const LEVELS: EnglishLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
 export default function GroupsScreen() {
   const authUser = useAppStore((s) => s.authUser);
+  const t = useT();
   const groups = useAppStore((s) => s.groups);
   const createGroup = useAppStore((s) => s.createGroup);
   const joinGroup = useAppStore((s) => s.joinGroup);
@@ -71,20 +73,20 @@ export default function GroupsScreen() {
   return (
     <Screen>
       <View className="flex-row items-center justify-between mb-6">
-        <Text className="text-2xl font-bold text-ink-light dark:text-ink-dark">Grupos de estudio</Text>
-        <Button label="+ Crear" size="sm" onPress={() => setCreateOpen(true)} />
+        <Text className="text-2xl font-bold text-ink-light dark:text-ink-dark">{t("groups.title")}</Text>
+        <Button label={t("groups.create")} size="sm" onPress={() => setCreateOpen(true)} />
       </View>
 
       {myGroups.length === 0 ? (
         <Card className="items-center py-10">
           <Text className="text-4xl mb-3">📚</Text>
-          <Text className="text-center font-semibold text-ink-light dark:text-ink-dark mb-1">Aún no perteneces a ningún grupo</Text>
+          <Text className="text-center font-semibold text-ink-light dark:text-ink-dark mb-1">{t("groups.emptyTitle")}</Text>
           <Text className="text-center text-ink-muted dark:text-ink-mutedDark mb-5">
-            Crea un grupo nuevo, únete desde la lista de grupos abiertos o usa un código de invitación.
+            {t("groups.emptyBody")}
           </Text>
           <View className="flex-row gap-3">
-            <Button label="Crear grupo" onPress={() => setCreateOpen(true)} />
-            <Button label="Unirme con código" variant="outline" onPress={() => setJoinOpen(true)} />
+            <Button label={t("groups.createGroup")} onPress={() => setCreateOpen(true)} />
+            <Button label={t("groups.joinWithCode")} variant="outline" onPress={() => setJoinOpen(true)} />
           </View>
         </Card>
       ) : (
@@ -98,23 +100,23 @@ export default function GroupsScreen() {
                 </View>
                 <Text className="text-ink-muted dark:text-ink-mutedDark mb-3" numberOfLines={2}>{g.description}</Text>
                 <View className="flex-row justify-between items-center">
-                  <Text className="text-xs text-ink-muted dark:text-ink-mutedDark">{g.memberIds.length}/{MAX_GROUP_MEMBERS} integrantes · {g.code}</Text>
-                  <Button label="Ver grupo" size="sm" variant="outline" onPress={() => router.push(`/(student)/groups/${g.id}`)} />
+                  <Text className="text-xs text-ink-muted dark:text-ink-mutedDark">{t("groups.members", { n: g.memberIds.length, max: MAX_GROUP_MEMBERS })} · {g.code}</Text>
+                  <Button label={t("groups.view")} size="sm" variant="outline" onPress={() => router.push(`/(student)/groups/${g.id}`)} />
                 </View>
               </Card>
             ))}
           </View>
           <View className="flex-row gap-3 mt-4">
-            <Button label="Unirme con código" variant="outline" onPress={() => setJoinOpen(true)} />
+            <Button label={t("groups.joinWithCode")} variant="outline" onPress={() => setJoinOpen(true)} />
           </View>
         </>
       )}
 
-      <Text className="text-lg font-bold text-ink-light dark:text-ink-dark mt-8 mb-3">Grupos abiertos</Text>
+      <Text className="text-lg font-bold text-ink-light dark:text-ink-dark mt-8 mb-3">{t("groups.open")}</Text>
       {feedError ? <Text className="text-xs text-red-500 mb-2">{feedError}</Text> : null}
       {openGroups.length === 0 ? (
         <Card>
-          <Text className="text-ink-muted dark:text-ink-mutedDark">No hay grupos con cupo disponible por ahora.</Text>
+          <Text className="text-ink-muted dark:text-ink-mutedDark">{t("groups.noOpen")}</Text>
         </Card>
       ) : (
         <View className="gap-3">
@@ -126,18 +128,18 @@ export default function GroupsScreen() {
               </View>
               <Text className="text-ink-muted dark:text-ink-mutedDark mb-3" numberOfLines={2}>{g.description}</Text>
               <View className="flex-row justify-between items-center">
-                <Text className="text-xs text-ink-muted dark:text-ink-mutedDark">{g.memberIds.length}/{MAX_GROUP_MEMBERS} integrantes</Text>
-                <Button label="Unirme" size="sm" onPress={() => handleJoinFromFeed(g.id)} />
+                <Text className="text-xs text-ink-muted dark:text-ink-mutedDark">{t("groups.members", { n: g.memberIds.length, max: MAX_GROUP_MEMBERS })}</Text>
+                <Button label={t("groups.join")} size="sm" onPress={() => handleJoinFromFeed(g.id)} />
               </View>
             </Card>
           ))}
         </View>
       )}
 
-      <Modal visible={createOpen} onClose={() => setCreateOpen(false)} title="Crear grupo">
-        <Input label="Nombre del grupo" placeholder="Ej: English Warriors" value={name} onChangeText={setName} />
-        <Input label="Descripción (opcional)" placeholder="¿De qué se trata este grupo?" value={description} onChangeText={setDescription} />
-        <Text className="text-sm font-medium text-ink-muted dark:text-ink-mutedDark mb-1.5">Nivel del grupo</Text>
+      <Modal visible={createOpen} onClose={() => setCreateOpen(false)} title={t("groups.createGroup")}>
+        <Input label={t("groups.name")} placeholder={t("groups.namePlaceholder")} value={name} onChangeText={setName} />
+        <Input label={t("groups.description")} placeholder={t("groups.descriptionPlaceholder")} value={description} onChangeText={setDescription} />
+        <Text className="text-sm font-medium text-ink-muted dark:text-ink-mutedDark mb-1.5">{t("groups.level")}</Text>
         <View className="flex-row flex-wrap gap-2 mb-5">
           {LEVELS.map((l) => (
             <Pressable
@@ -150,12 +152,12 @@ export default function GroupsScreen() {
           ))}
         </View>
         {createError ? <Text className="text-xs text-red-500 mb-2">{createError}</Text> : null}
-        <Button label="Crear grupo" onPress={handleCreate} loading={busy} fullWidth disabled={!name.trim()} />
+        <Button label={t("groups.createGroup")} onPress={handleCreate} loading={busy} fullWidth disabled={!name.trim()} />
       </Modal>
 
-      <Modal visible={joinOpen} onClose={() => setJoinOpen(false)} title="Unirse a grupo">
+      <Modal visible={joinOpen} onClose={() => setJoinOpen(false)} title={t("groups.joinTitle")}>
         <Input
-          label="Código de invitación"
+          label={t("groups.code")}
           placeholder="DUOC-0000"
           autoCapitalize="characters"
           value={code}
@@ -165,7 +167,7 @@ export default function GroupsScreen() {
           }}
           error={joinError}
         />
-        <Button label="Unirme" onPress={handleJoin} loading={busy} fullWidth disabled={!code.trim()} />
+        <Button label={t("groups.join")} onPress={handleJoin} loading={busy} fullWidth disabled={!code.trim()} />
       </Modal>
     </Screen>
   );

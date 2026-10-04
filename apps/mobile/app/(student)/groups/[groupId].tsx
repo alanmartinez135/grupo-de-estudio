@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/store/useAppStore";
 import { MeetingsTab } from "@/components/MeetingsTab";
 import { MAX_GROUP_MEMBERS } from "@/data/mockData";
+import { useT } from "@/lib/useT";
 
 export default function GroupDetailScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
+  const t = useT();
   const group = useAppStore((s) => s.groups.find((g) => g.id === groupId));
   const users = useAppStore((s) => s.users);
   const authUser = useAppStore((s) => s.authUser);
@@ -33,7 +35,7 @@ export default function GroupDetailScreen() {
   if (!group) {
     return (
       <Screen>
-        <Text className="text-ink-light dark:text-ink-dark">Grupo no encontrado.</Text>
+        <Text className="text-ink-light dark:text-ink-dark">{t("groups.notFound")}</Text>
       </Screen>
     );
   }
@@ -76,15 +78,15 @@ export default function GroupDetailScreen() {
         <View className="flex-row items-center justify-between">
           <Pressable onPress={copyCode} className="flex-row items-center gap-2 bg-navy-50 dark:bg-navy-800 rounded-full px-4 py-2">
             <Text className="font-semibold text-navy-700 dark:text-gold-500">{group.code}</Text>
-            <Text className="text-navy-700 dark:text-gold-500 text-xs">{copied ? "¡Copiado!" : "Copiar"}</Text>
+            <Text className="text-navy-700 dark:text-gold-500 text-xs">{copied ? t("groups.copied") : t("groups.copy")}</Text>
           </Pressable>
-          <Text className="text-xs text-ink-muted dark:text-ink-mutedDark">{group.memberIds.length}/{MAX_GROUP_MEMBERS} integrantes</Text>
+          <Text className="text-xs text-ink-muted dark:text-ink-mutedDark">{t("groups.members", { n: group.memberIds.length, max: MAX_GROUP_MEMBERS })}</Text>
         </View>
         <View className="mt-4">
           {isMember ? (
-            <Button label="Abandonar grupo" variant="outline" onPress={handleLeave} loading={busy} fullWidth />
+            <Button label={t("groups.leave")} variant="outline" onPress={handleLeave} loading={busy} fullWidth />
           ) : (
-            <Button label="Unirme al grupo" onPress={handleJoin} loading={busy} fullWidth />
+            <Button label={t("groups.joinGroup")} onPress={handleJoin} loading={busy} fullWidth />
           )}
           {joinError ? <Text className="mt-1 text-xs text-red-500">{joinError}</Text> : null}
         </View>
@@ -92,13 +94,13 @@ export default function GroupDetailScreen() {
 
       <View className="flex-row rounded-full bg-navy-50 dark:bg-navy-800 p-1 mb-4">
         <Pressable onPress={() => setTab("members")} className={`flex-1 rounded-full py-2 items-center ${tab === "members" ? "bg-white dark:bg-navy-700" : ""}`}>
-          <Text className={`font-semibold ${tab === "members" ? "text-navy-700 dark:text-gold-500" : "text-ink-muted dark:text-ink-mutedDark"}`}>Integrantes</Text>
+          <Text className={`font-semibold ${tab === "members" ? "text-navy-700 dark:text-gold-500" : "text-ink-muted dark:text-ink-mutedDark"}`}>{t("groups.tabMembers")}</Text>
         </Pressable>
         <Pressable onPress={() => setTab("tests")} className={`flex-1 rounded-full py-2 items-center ${tab === "tests" ? "bg-white dark:bg-navy-700" : ""}`}>
-          <Text className={`font-semibold ${tab === "tests" ? "text-navy-700 dark:text-gold-500" : "text-ink-muted dark:text-ink-mutedDark"}`}>Tests</Text>
+          <Text className={`font-semibold ${tab === "tests" ? "text-navy-700 dark:text-gold-500" : "text-ink-muted dark:text-ink-mutedDark"}`}>{t("groups.tabTests")}</Text>
         </Pressable>
         <Pressable onPress={() => setTab("meetings")} className={`flex-1 rounded-full py-2 items-center ${tab === "meetings" ? "bg-white dark:bg-navy-700" : ""}`}>
-          <Text className={`font-semibold ${tab === "meetings" ? "text-navy-700 dark:text-gold-500" : "text-ink-muted dark:text-ink-mutedDark"}`}>Encuentros</Text>
+          <Text className={`font-semibold ${tab === "meetings" ? "text-navy-700 dark:text-gold-500" : "text-ink-muted dark:text-ink-mutedDark"}`}>{t("groups.tabMeetings")}</Text>
         </Pressable>
       </View>
 
@@ -107,7 +109,7 @@ export default function GroupDetailScreen() {
           <MeetingsTab groupId={group.id} />
         ) : (
           <Card>
-            <Text className="text-ink-muted dark:text-ink-mutedDark">Únete al grupo para ver y proponer encuentros de estudio.</Text>
+            <Text className="text-ink-muted dark:text-ink-mutedDark">{t("groups.joinToSeeMeetings")}</Text>
           </Card>
         )
       ) : tab === "members" ? (
@@ -119,7 +121,7 @@ export default function GroupDetailScreen() {
                 <Text className="font-semibold text-ink-light dark:text-ink-dark">{m.name}</Text>
                 <Text className="text-xs text-ink-muted dark:text-ink-mutedDark">{m.career}</Text>
               </View>
-              {m.id === group.createdBy && <Badge label="Creador" tone="gold" />}
+              {m.id === group.createdBy && <Badge label={t("groups.creator")} tone="gold" />}
             </Card>
           ))}
         </View>
@@ -128,20 +130,20 @@ export default function GroupDetailScreen() {
           {weeklyTests.length === 0 ? (
             <Card>
               <Text className="text-ink-muted dark:text-ink-mutedDark">
-                {isMember ? "Aún no hay tests para el nivel de este grupo." : "Únete al grupo para ver y resolver sus tests semanales."}
+                {isMember ? t("groups.noTests") : t("groups.joinToSeeTests")}
               </Text>
             </Card>
           ) : (
-            weeklyTests.map((t) => (
-              <Card key={t.id} className="flex-row items-center justify-between">
+            weeklyTests.map((test) => (
+              <Card key={test.id} className="flex-row items-center justify-between">
                 <View className="flex-1 pr-3">
-                  <Text className="font-semibold text-ink-light dark:text-ink-dark mb-1">{t.title}</Text>
+                  <Text className="font-semibold text-ink-light dark:text-ink-dark mb-1">{test.title}</Text>
                   <View className="flex-row gap-2">
-                    <Badge label={t.skill === "reading" ? "Lectura" : "Escritura"} tone="navy" />
-                    <Badge label={t.status === "completed" ? "Completado" : "Pendiente"} tone={t.status === "completed" ? "success" : "gold"} />
+                    <Badge label={test.skill === "reading" ? t("common.reading") : t("common.writing")} tone="navy" />
+                    <Badge label={test.status === "completed" ? t("common.completed") : t("common.pending")} tone={test.status === "completed" ? "success" : "gold"} />
                   </View>
                 </View>
-                <Button label={t.status === "completed" ? "Ver" : "Resolver"} size="sm" onPress={() => router.push(`/(student)/weekly-tests/${t.id}`)} />
+                <Button label={test.status === "completed" ? t("common.view") : t("common.solve")} size="sm" onPress={() => router.push(`/(student)/weekly-tests/${test.id}`)} />
               </Card>
             ))
           )}
