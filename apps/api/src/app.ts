@@ -22,7 +22,11 @@ export async function buildApp({ config, db }: { config: Config; db: Db }) {
   );
 
   // CORS limitado a los orígenes de CORS_ORIGIN; la app nativa no lo necesita (RNF-B07).
-  await app.register(cors, { origin: config.corsOrigins });
+  await app.register(cors, {
+    origin: config.corsOrigins,
+    methods: ["GET", "HEAD", "POST", "PATCH", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  });
   await app.register(jwt, { secret: config.jwtSecret });
   // El límite se evalúa después de leer el cuerpo, para poder usar el correo en la clave.
   await app.register(rateLimit, { global: false, hook: "preHandler" });

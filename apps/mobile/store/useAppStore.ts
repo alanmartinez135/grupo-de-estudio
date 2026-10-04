@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { EnglishLevel, Jornada } from "@grupo-estudio/types";
+import type { EnglishLevel, Jornada, User } from "@grupo-estudio/types";
+import { api, errorMessage } from "@/lib/api";
 import { MAX_GROUP_MEMBERS } from "@/data/mockData";
 
 import {
@@ -26,7 +27,10 @@ interface AppState {
   // --- auth / sesión ---
   authUser: MockUser | null;
   users: MockUser[];
-  login: (correo: string, password: string) => { ok: boolean; message: string };
+  // true cuando ya se intentó recuperar la sesión guardada al abrir la app
+  sessionChecked: boolean;
+  restoreSession: () => Promise<void>;
+  login: (correo: string, password: string) => Promise<{ ok: boolean; message: string }>;
   register: (data: {
     correo: string;
     password: string;
@@ -34,9 +38,9 @@ interface AppState {
     career: string;
     jornada: Jornada;
     englishLevel: EnglishLevel;
-  }) => { ok: boolean; message: string };
-  logout: () => void;
-  deleteAccount: () => void;
+  }) => Promise<{ ok: boolean; message: string }>;
+  logout: () => Promise<void>;
+  deleteAccount: () => Promise<{ ok: boolean; message: string }>;
   resetRequested: string | null;
   requestPasswordReset: (correo: string) => { ok: boolean; message: string };
   resetPassword: (newPassword: string) => void;
@@ -82,42 +86,58 @@ interface AppState {
   removeUser: (userId: string) => void;
 }
 
+// El API entrega el usuario sin contraseña ni color de avatar; mientras el resto de la
+// app siga usando el tipo del prototipo (MockUser), se completa con valores neutros.
+function toAuthUser(user: User): MockUser {
+  return { ...user, password: "", avatarColor: "#2E5B8A" };
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   authUser: null,
   users: mockUsers,
-  login: (correo, password) => {
-    const found = get().users.find((u) => u.correo.toLowerCase() === correo.trim().toLowerCase());
-    if (!found) return { ok: false, message: "No encontramos una cuenta con ese correo." };
-    if (found.password !== password) return { ok: false, message: "Contraseña incorrecta." };
-    set({ authUser: found, activeRole: found.role });
-    return { ok: true, message: "Bienvenido/a de vuelta." };
-  },
-  register: ({ correo, password, name, career, jornada, englishLevel }) => {
-    if (!correo.toLowerCase().endsWith("@duocuc.cl")) {
-      return { ok: false, message: "Usa tu correo institucional (@duocuc.cl)." };
+  // --- autenticación contra el API (apps/api) ---
+  sessionChecked: false,
+  restoreSession: async () => {
+    try {
+      const user = await api.auth.restoreSession();
+      if (user) set({ authUser: toAuthUser(user), activeRole: user.role });
+    } catch {
+      // Si la sesión guardada no sirve, simplemente se pide iniciar sesión.
+    } finally {
+      set({ sessionChecked: true });
     }
-    if (get().users.some((u) => u.correo.toLowerCase() === correo.toLowerCase())) {
-      return { ok: false, message: "Ya existe una cuenta con ese correo." };
-    }
-    const newUser: MockUser = {
-      id: `u-${Date.now()}`,
-      correo,
-      password,
-      name: name.trim(),
-      career: career.trim(),
-      jornada,
-      englishLevel,
-      role: "student",
-      avatarColor: "#2E5B8A",
-    };
-    set((s) => ({ users: [...s.users, newUser], authUser: newUser, activeRole: "student" }));
-    return { ok: true, message: "Cuenta creada correctamente." };
   },
-  logout: () => set({ authUser: null }),
-  deleteAccount: () => {
-    const id = get().authUser?.id;
-    if (!id) return;
-    set((s) => ({ users: s.users.filter((u) => u.id !== id), authUser: null }));
+  login: async (correo, password) => {
+    try {
+      const user = await api.auth.login({ correo, password });
+      set({ authUser: toAuthUser(user), activeRole: user.role });
+      return { ok: true, message: "Bienvenido/a de vuelta." };
+    } catch (error) {
+      return { ok: false, message: errorMessage(error) };
+    }
+  },
+  register: async (data) => {
+    try {
+      const user = await api.auth.register(data);
+      set({ authUser: toAuthUser(user), activeRole: user.role });
+      return { ok: true, message: "Cuenta creada correctamente." };
+    } catch (error) {
+      return { ok: false, message: errorMessage(error) };
+    }
+  },
+  logout: async () => {
+    await api.auth.logout();
+    set({ authUser: null, activeRole: "student" });
+  },
+  deleteAccount: async () => {
+    try {
+      await api.users.deleteMe();
+      await api.auth.logout();
+      set({ authUser: null, activeRole: "student" });
+      return { ok: true, message: "Tu cuenta fue eliminada." };
+    } catch (error) {
+      return { ok: false, message: errorMessage(error) };
+    }
   },
   resetRequested: null,
   requestPasswordReset: (correo) => {
@@ -223,3 +243,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({ users: s.users.map((u) => (u.id === userId ? { ...u, role } : u)) })),
   removeUser: (userId) => set((s) => ({ users: s.users.filter((u) => u.id !== userId) })),
 }));
+
+// Si el servidor rechaza la sesión y no se puede renovar, se vuelve al login.
+api.setOnSessionExpired(() => useAppStore.setState({ authUser: null, activeRole: "student" }));

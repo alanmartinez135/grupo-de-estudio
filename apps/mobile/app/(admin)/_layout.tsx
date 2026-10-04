@@ -12,7 +12,9 @@ const navItems = [
 export default function AdminLayout() {
   const authUser = useAppStore((s) => s.authUser);
   const theme = useAppStore((s) => s.theme);
+  const sessionChecked = useAppStore((s) => s.sessionChecked);
 
+  if (!sessionChecked) return null;
   if (!authUser) return <Redirect href="/(auth)/login" />;
 
   return (

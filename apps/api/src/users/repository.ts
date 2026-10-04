@@ -46,6 +46,11 @@ export async function findById(db: Db, id: string): Promise<UserWithHash | null>
   return rows[0] ? toUser(rows[0]) : null;
 }
 
+export async function deleteUser(db: Db, id: string): Promise<void> {
+  // Las membresías se borran en cascada (ON DELETE CASCADE en grupo_integrantes).
+  await db.query("DELETE FROM usuarios WHERE id = $1", [id]);
+}
+
 export async function insertUser(
   db: Db,
   data: Omit<User, "id" | "role"> & { passwordHash: string; role?: Role },

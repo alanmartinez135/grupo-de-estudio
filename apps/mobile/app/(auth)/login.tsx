@@ -8,20 +8,18 @@ import { useAppStore } from "@/store/useAppStore";
 
 export default function LoginScreen() {
   const login = useAppStore((s) => s.login);
-  const [correo, setCorreo] = useState("javiera.acuna@duocuc.cl");
-  const [password, setPassword] = useState("duoc2024");
+  const [correo, setCorreo] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function handleLogin() {
+  async function handleLogin() {
     setLoading(true);
     setError("");
-    setTimeout(() => {
-      const result = login(correo, password);
-      setLoading(false);
-      if (!result.ok) return setError(result.message);
-      router.replace("/");
-    }, 400);
+    const result = await login(correo, password);
+    setLoading(false);
+    if (!result.ok) return setError(result.message);
+    router.replace("/");
   }
 
   return (
@@ -31,16 +29,13 @@ export default function LoginScreen() {
       <Link href="/(auth)/forgot-password" className="mb-5">
         <Text className="text-navy-700 dark:text-gold-500 text-sm font-semibold">Olvidé mi contraseña</Text>
       </Link>
-      <Button label="Ingresar" onPress={handleLogin} loading={loading} fullWidth />
+      <Button label="Ingresar" onPress={handleLogin} loading={loading} disabled={!correo || !password} fullWidth />
       <View className="flex-row justify-center mt-5">
         <Text className="text-ink-muted dark:text-ink-mutedDark">¿No tienes cuenta? </Text>
         <Link href="/(auth)/register">
           <Text className="text-navy-700 dark:text-gold-500 font-semibold">Regístrate</Text>
         </Link>
       </View>
-      <Text className="text-center text-xs text-ink-muted dark:text-ink-mutedDark mt-6">
-        Demo: admin@duocuc.cl / admin2024 para probar la vista de Administrador.
-      </Text>
     </AuthShell>
   );
 }
