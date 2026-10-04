@@ -19,6 +19,7 @@ export default function RootLayout() {
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
   const theme = useAppStore((s) => s.theme);
+  const restoreSession = useAppStore((s) => s.restoreSession);
 
   useEffect(() => {
     if (error) throw error;
@@ -27,6 +28,11 @@ export default function RootLayout() {
   useEffect(() => {
     if (loaded) SplashScreen.hideAsync();
   }, [loaded]);
+
+  // Al abrir la app, recupera la sesión guardada (si existe) contra el API.
+  useEffect(() => {
+    restoreSession();
+  }, [restoreSession]);
 
   // Sincroniza el toggle claro/oscuro del store con las variantes `dark:` de NativeWind.
   useEffect(() => {

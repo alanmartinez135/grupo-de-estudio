@@ -73,15 +73,12 @@ Otros comandos de la raíz: `pnpm lint`, `pnpm check-types`, `pnpm format`.
 
 ## Cuentas de prueba
 
-Los datos son ficticios y viven en `apps/mobile/data/mockData.ts`. El formulario de login viene precargado con la cuenta de estudiante.
+El inicio de sesión y el registro usan la API real, así que las cuentas viven en PostgreSQL:
 
-| Rol           | Correo                        | Contraseña |
-| ------------- | ----------------------------- | ---------- |
-| Estudiante    | `javiera.acuna@duocuc.cl`     | `duoc2024` |
-| Estudiante    | `sebastian.navarro@duocuc.cl` | `duoc2024` |
-| Administrador | `admin@duocuc.cl`             | `admin2024` |
+- **Estudiante:** crea una desde la pantalla de registro (correo `@duocuc.cl`, contraseña de al menos 8 caracteres).
+- **Administrador:** define `SEED_ADMIN_CORREO` y `SEED_ADMIN_PASSWORD` en `apps/api/.env` y ejecuta `pnpm --filter api db:seed`.
 
-Dentro de la app, el botón flotante dorado (**⇄**, “Dev Toolbar”) permite cambiar entre la vista de Alumno y la de Administrador sin volver a iniciar sesión.
+Dentro de la app, el botón flotante dorado (**⇄**, "Dev Toolbar") permite cambiar entre la vista de Alumno y la de Administrador para revisar las pantallas. Es solo visual: la API sigue validando el rol real en cada solicitud.
 
 ## Frontend (apps/mobile)
 
@@ -189,6 +186,7 @@ Todas las rutas usan el prefijo `/api/v1`. Los errores responden siempre con `{ 
 | POST   | `/auth/login`     | Público       | Inicia sesión; máximo 5 intentos por minuto          |
 | POST   | `/auth/renovar`   | Público       | Entrega tokens nuevos a partir del token de renovación |
 | GET    | `/usuarios/me`    | Con sesión    | Datos del usuario de la sesión                       |
+| DELETE | `/usuarios/me`    | Con sesión    | Elimina la cuenta y sus datos                        |
 | GET    | `/usuarios`       | Administrador | Lista y filtra usuarios (`?q=` y `?rol=`)             |
 | GET    | `/health`         | Público       | Estado de la API y de la base (sin prefijo)          |
 
@@ -203,9 +201,19 @@ Todas las rutas usan el prefijo `/api/v1`. Los errores responden siempre con `{ 
 
 El esquema está en `apps/api/db/schema.sql`: tablas `usuarios`, `grupos` y `grupo_integrantes`. Evaluaciones, resultados y mensajes se agregan en los próximos incrementos.
 
+### Conexión de la app con la API
+
+`packages/api` es el cliente HTTP que usa la app: adjunta el token, lo renueva cuando vence y entrega los errores con su mensaje. Hoy están conectados el **registro, el inicio de sesión, el cierre de sesión y la eliminación de cuenta**; el resto de la app sigue con datos simulados.
+
+```sh
+copy apps\mobile\.env.example apps\mobile\.env   # Windows (en macOS/Linux: cp)
+```
+
+En `apps/mobile/.env`, `EXPO_PUBLIC_API_URL` apunta a `http://localhost:3000` para la versión web. Para probar en un teléfono con Expo Go, usa la IP del computador en la misma red WiFi (la API la muestra al iniciar) y reinicia Expo. En el teléfono la sesión se guarda cifrada con `expo-secure-store`; en web queda solo en memoria.
+
 ### Pendiente
 
-Endpoints de grupos, evaluaciones y chat, y la conexión de `apps/mobile` con la API (hoy la app sigue usando datos simulados).
+Endpoints de grupos, evaluaciones y chat, y su conexión con la app.
 
 ## Estado del proyecto
 

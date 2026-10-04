@@ -17,16 +17,27 @@ export default function SettingsScreen() {
   const logout = useAppStore((s) => s.logout);
   const deleteAccount = useAppStore((s) => s.deleteAccount);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     router.replace("/(auth)/login");
   }
 
-  function handleDelete() {
-    deleteAccount();
+  async function handleDelete() {
+    setDeleting(true);
+    setDeleteError("");
+    const result = await deleteAccount();
+    setDeleting(false);
+    if (!result.ok) return setDeleteError(result.message);
     setConfirmOpen(false);
     router.replace("/(auth)/login");
+  }
+
+  function closeConfirm() {
+    setConfirmOpen(false);
+    setDeleteError("");
   }
 
   return (
@@ -69,13 +80,14 @@ export default function SettingsScreen() {
         <Button label="Eliminar cuenta" variant="danger" onPress={() => setConfirmOpen(true)} fullWidth />
       </Card>
 
-      <Modal visible={confirmOpen} onClose={() => setConfirmOpen(false)} title="¿Eliminar cuenta?">
+      <Modal visible={confirmOpen} onClose={closeConfirm} title="¿Eliminar cuenta?">
         <Text className="text-ink-light dark:text-ink-dark mb-5">
           Esta acción no se puede deshacer. Perderás acceso a tus grupos, tests y resultados.
         </Text>
+        {deleteError ? <Text className="text-red-600 text-sm mb-4">{deleteError}</Text> : null}
         <View className="flex-row gap-3">
-          <Button label="Cancelar" variant="outline" onPress={() => setConfirmOpen(false)} fullWidth />
-          <Button label="Eliminar" variant="danger" onPress={handleDelete} fullWidth />
+          <Button label="Cancelar" variant="outline" onPress={closeConfirm} fullWidth />
+          <Button label="Eliminar" variant="danger" onPress={handleDelete} loading={deleting} fullWidth />
         </View>
       </Modal>
     </Screen>

@@ -24,15 +24,13 @@ export default function RegisterScreen() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function handleRegister() {
+  async function handleRegister() {
     setLoading(true);
     setError("");
-    setTimeout(() => {
-      const result = register({ correo, password, name, career, jornada, englishLevel });
-      setLoading(false);
-      if (!result.ok) return setError(result.message);
-      router.replace("/");
-    }, 400);
+    const result = await register({ correo, password, name, career, jornada, englishLevel });
+    setLoading(false);
+    if (!result.ok) return setError(result.message);
+    router.replace("/");
   }
 
   return (
@@ -77,7 +75,7 @@ export default function RegisterScreen() {
         onChangeText={setCorreo}
         error={error}
       />
-      <Input label="Contraseña" placeholder="Crea una contraseña" secureTextEntry value={password} onChangeText={setPassword} />
+      <Input label="Contraseña" placeholder="Mínimo 8 caracteres" secureTextEntry value={password} onChangeText={setPassword} />
       <Button
         label="Registrarme"
         onPress={handleRegister}
