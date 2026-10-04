@@ -200,6 +200,11 @@ Todas las rutas usan el prefijo `/api/v1`. Los errores responden siempre con `{ 
 | GET    | `/tests`          | Con sesión    | Tests semanales del nivel de mis grupos, con su estado |
 | GET    | `/tests/:id`      | Con sesión    | Test con sus preguntas (sin respuestas correctas)    |
 | POST   | `/tests/:id/respuestas` | Con sesión | Califica el test en el servidor                  |
+| GET    | `/grupos/:id/encuentros` | Integrante | Encuentros vigentes del grupo, con asistentes  |
+| POST   | `/grupos/:id/encuentros` | Integrante | Proponer un encuentro (presencial u online)    |
+| PUT    | `/encuentros/:id/asistencia` | Integrante | Confirmar o rechazar asistencia            |
+| DELETE | `/encuentros/:id` | Quien lo propuso | Cancelar el encuentro                         |
+| GET    | `/encuentros/proximos` | Con sesión | Próximos encuentros de todos mis grupos         |
 | GET    | `/health`         | Público       | Estado de la API y de la base (sin prefijo)          |
 
 ### Seguridad
@@ -213,13 +218,13 @@ Todas las rutas usan el prefijo `/api/v1`. Los errores responden siempre con `{ 
 
 ### Modelo de datos
 
-El esquema está en `apps/api/db/schema.sql`: `usuarios`, `grupos`, `grupo_integrantes`, `evaluaciones`, `preguntas` y `resultados`. Al iniciar, la API carga el contenido inicial de `apps/api/src/content/evaluaciones.ts`: un diagnóstico de 12 preguntas (reading y writing, por competencia) y tests semanales de A1 a C1. Cada test semanal tiene un nivel y lo ven los integrantes de los grupos de ese nivel. Los mensajes del chat se agregan en un próximo incremento.
+El esquema está en `apps/api/db/schema.sql`: `usuarios`, `grupos`, `grupo_integrantes`, `evaluaciones`, `preguntas`, `resultados`, `encuentros` y `asistencias`. Al iniciar, la API carga el contenido inicial de `apps/api/src/content/evaluaciones.ts`: un diagnóstico de 12 preguntas (reading y writing, por competencia) y tests semanales de A1 a C1. Cada test semanal tiene un nivel y lo ven los integrantes de los grupos de ese nivel. Los mensajes del chat quedan como trabajo futuro.
 
 La escala de puntaje a nivel (0–29 % A1, 30–49 % A2, 50–69 % B1, 70–84 % B2, 85–94 % C1, 95–100 % C2) es provisoria y está en `apps/api/src/evaluations/scoring.ts`. Las rúbricas de writing y speaking de la coordinación de inglés quedan como referencia para una futura evaluación de respuesta abierta.
 
 ### Conexión de la app con la API
 
-`packages/api` es el cliente HTTP que usa la app: adjunta el token, lo renueva cuando vence y entrega los errores con su mensaje. Hoy están conectados el **registro, el inicio de sesión, el cierre de sesión, la eliminación de cuenta, los grupos de estudio, la evaluación diagnóstica y los tests semanales**; la comunidad (chat) y la administración siguen con datos simulados.
+`packages/api` es el cliente HTTP que usa la app: adjunta el token, lo renueva cuando vence y entrega los errores con su mensaje. Hoy están conectados el **registro, el inicio de sesión, el cierre de sesión, la eliminación de cuenta, los grupos de estudio, la evaluación diagnóstica, los tests semanales y la coordinación de encuentros**; la comunidad (chat) y la administración siguen con datos simulados.
 
 ```sh
 copy apps\mobile\.env.example apps\mobile\.env   # Windows (en macOS/Linux: cp)
@@ -229,7 +234,7 @@ En `apps/mobile/.env`, `EXPO_PUBLIC_API_URL` apunta a `http://localhost:3000` pa
 
 ### Pendiente
 
-Coordinación de encuentros, chat y administración (usuarios y evaluaciones), y su conexión con la app.
+Despliegue en la nube, pruebas de rendimiento (k6), administración (usuarios y evaluaciones) conectada a la API y, como trabajo futuro, el chat y la recuperación de contraseña por correo.
 
 ## Estado del proyecto
 

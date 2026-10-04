@@ -1,7 +1,7 @@
 -- Modelo de datos de Grupo de Estudio Duoc UC (PostgreSQL 16).
 -- Es idempotente: se puede ejecutar varias veces (pnpm --filter api db:migrate).
 -- Sprint 5: usuarios, grupos de estudio e integrantes.
--- Sprint 6: evaluaciones (diagnóstica y semanales), preguntas y resultados.
+-- Sprint 6: evaluaciones (diagnóstica y semanales), preguntas, resultados y encuentros de estudio.
 -- Los mensajes del chat se agregan en un incremento siguiente.
 
 DO $$ BEGIN
@@ -97,3 +97,34 @@ CREATE TABLE IF NOT EXISTS resultados (
 
 CREATE INDEX IF NOT EXISTS evaluaciones_semanal_nivel_idx ON evaluaciones (nivel) WHERE tipo = 'semanal';
 CREATE INDEX IF NOT EXISTS resultados_usuario_idx ON resultados (usuario_id);
+
+-- ---------------------------------------------------------------- encuentros de estudio (Sprint 6)
+
+DO $$ BEGIN
+  CREATE TYPE modalidad_encuentro AS ENUM ('presencial', 'online');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE respuesta_asistencia AS ENUM ('yes', 'no');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+CREATE TABLE IF NOT EXISTS encuentros (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  grupo_id      uuid NOT NULL REFERENCES grupos(id) ON DELETE CASCADE,
+  tema          text NOT NULL,
+  inicio        timestamptz NOT NULL,
+  duracion_min  int NOT NULL CHECK (duracion_min BETWEEN 15 AND 240),
+  modalidad     modalidad_encuentro NOT NULL,
+  lugar         text NOT NULL,              -- sala o sede si es presencial; enlace si es online
+  creado_por    uuid REFERENCES usuarios(id) ON DELETE SET NULL,
+  creado_en     timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS asistencias (
+  encuentro_id  uuid NOT NULL REFERENCES encuentros(id) ON DELETE CASCADE,
+  usuario_id    uuid NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  respuesta     respuesta_asistencia NOT NULL,
+  PRIMARY KEY (encuentro_id, usuario_id)
+);
+
+CREATE INDEX IF NOT EXISTS encuentros_grupo_inicio_idx ON encuentros (grupo_id, inicio);

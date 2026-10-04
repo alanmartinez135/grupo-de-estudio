@@ -1,11 +1,14 @@
 import type {
   ApiError,
+  Attendance,
   AuthResponse,
+  CreateMeetingInput,
   CreateGroupInput,
   DiagnosticResult,
   DiagnosticTest,
   GroupWithMembers,
   LoginInput,
+  Meeting,
   RegisterInput,
   TestResult,
   User,
@@ -32,7 +35,7 @@ export interface ApiClientOptions {
 }
 
 interface RequestOptions {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   auth?: boolean; // adjunta el token de acceso y lo renueva si expiró
 }
@@ -182,6 +185,20 @@ export function createApiClient({ baseUrl, tokens, timeoutMs = 10000 }: ApiClien
           throw error;
         }
       },
+    },
+
+    meetings: {
+      ofGroup: (groupId: string) => request<Meeting[]>(`/grupos/${encodeURIComponent(groupId)}/encuentros`, { auth: true }),
+      upcoming: () => request<Meeting[]>("/encuentros/proximos", { auth: true }),
+      create: (groupId: string, input: CreateMeetingInput) =>
+        request<Meeting>(`/grupos/${encodeURIComponent(groupId)}/encuentros`, { method: "POST", body: input, auth: true }),
+      respond: (meetingId: string, response: Attendance) =>
+        request<Meeting>(`/encuentros/${encodeURIComponent(meetingId)}/asistencia`, {
+          method: "PUT",
+          body: { response },
+          auth: true,
+        }),
+      cancel: (meetingId: string) => request<void>(`/encuentros/${encodeURIComponent(meetingId)}`, { method: "DELETE", auth: true }),
     },
 
     tests: {

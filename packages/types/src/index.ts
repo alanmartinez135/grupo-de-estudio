@@ -3,3 +3,4 @@ export * from "./studyGroup";
 export * from "./auth";
 export * from "./errors";
 export * from "./evaluation";
+export * from "./meeting";
