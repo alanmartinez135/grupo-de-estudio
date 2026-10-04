@@ -154,6 +154,47 @@ describe("rutas protegidas", () => {
   });
 });
 
+describe("DELETE /api/v1/usuarios/me", () => {
+  it("elimina la cuenta y el token deja de servir", async () => {
+    const { accessToken } = (await registrar(nuevoEstudiante())).json();
+    const auth = { authorization: `Bearer ${accessToken}` };
+    const res = await app.inject({ method: "DELETE", url: "/api/v1/usuarios/me", headers: auth });
+    expect(res.statusCode).toBe(204);
+
+    const { rows } = await db.query("SELECT count(*)::int AS n FROM usuarios");
+    expect(rows[0].n).toBe(0);
+    const despues = await app.inject({ method: "GET", url: "/api/v1/usuarios/me", headers: auth });
+    expect(despues.statusCode).toBe(401);
+  });
+});
+
+describe("CORS (app web en http://localhost:8081)", () => {
+  it("permite DELETE con Authorization desde el origen de la app", async () => {
+    const res = await app.inject({
+      method: "OPTIONS",
+      url: "/api/v1/usuarios/me",
+      headers: {
+        origin: "http://localhost:8081",
+        "access-control-request-method": "DELETE",
+        "access-control-request-headers": "authorization",
+      },
+    });
+    expect(res.statusCode).toBe(204);
+    expect(res.headers["access-control-allow-origin"]).toBe("http://localhost:8081");
+    expect(String(res.headers["access-control-allow-methods"])).toContain("DELETE");
+    expect(String(res.headers["access-control-allow-headers"]).toLowerCase()).toContain("authorization");
+  });
+
+  it("no autoriza otros orígenes", async () => {
+    const res = await app.inject({
+      method: "OPTIONS",
+      url: "/api/v1/usuarios/me",
+      headers: { origin: "https://sitio-malicioso.com", "access-control-request-method": "DELETE" },
+    });
+    expect(res.headers["access-control-allow-origin"]).toBeUndefined();
+  });
+});
+
 describe("formato de errores", () => {
   it("una ruta inexistente responde con el formato común", async () => {
     const res = await app.inject({ method: "GET", url: "/api/v1/no-existe" });
