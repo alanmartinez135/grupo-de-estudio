@@ -18,7 +18,7 @@ export default function GroupDetailScreen() {
   const leaveGroup = useAppStore((s) => s.leaveGroup);
   const loadGroups = useAppStore((s) => s.loadGroups);
   const allWeeklyTests = useAppStore((s) => s.weeklyTests);
-  const weeklyTests = allWeeklyTests.filter((t) => t.groupId === groupId);
+  const weeklyTests = allWeeklyTests.filter((t) => t.groupIds.includes(groupId ?? ""));
   const [tab, setTab] = useState<"members" | "tests">("members");
   const [copied, setCopied] = useState(false);
   const [joinError, setJoinError] = useState("");
@@ -114,7 +114,11 @@ export default function GroupDetailScreen() {
       ) : (
         <View className="gap-2.5">
           {weeklyTests.length === 0 ? (
-            <Card><Text className="text-ink-muted dark:text-ink-mutedDark">Este grupo aún no tiene tests asignados.</Text></Card>
+            <Card>
+              <Text className="text-ink-muted dark:text-ink-mutedDark">
+                {isMember ? "Aún no hay tests para el nivel de este grupo." : "Únete al grupo para ver y resolver sus tests semanales."}
+              </Text>
+            </Card>
           ) : (
             weeklyTests.map((t) => (
               <Card key={t.id} className="flex-row items-center justify-between">

@@ -18,10 +18,17 @@ export default function StudentLayout() {
   const theme = useAppStore((s) => s.theme);
   const sessionChecked = useAppStore((s) => s.sessionChecked);
   const loadGroups = useAppStore((s) => s.loadGroups);
+  const loadWeeklyTests = useAppStore((s) => s.loadWeeklyTests);
+  const loadDiagnostic = useAppStore((s) => s.loadDiagnostic);
+  const userId = authUser?.id;
 
+  // Datos del estudiante desde la API: grupos, tests semanales y resultado del diagnóstico.
   useEffect(() => {
-    if (authUser) loadGroups();
-  }, [authUser, loadGroups]);
+    if (!userId) return;
+    loadGroups();
+    loadWeeklyTests();
+    loadDiagnostic();
+  }, [userId, loadGroups, loadWeeklyTests, loadDiagnostic]);
 
   if (!sessionChecked) return null;
   if (!authUser) return <Redirect href="/(auth)/login" />;

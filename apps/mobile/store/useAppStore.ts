@@ -1,24 +1,27 @@
 import { create } from "zustand";
-import type { EnglishLevel, Jornada, User } from "@grupo-estudio/types";
+import type {
+  DiagnosticResult,
+  EnglishLevel,
+  Jornada,
+  TestResult,
+  User,
+  WeeklyTestSummary,
+} from "@grupo-estudio/types";
 import { api, errorMessage } from "@/lib/api";
 
 import {
   AdminTestDefinition,
   ChatMessage,
   CURRENT_USER_ID,
-  DiagnosticResult,
   Language,
   MockUser,
   Role,
   StudyGroupUI,
   Theme,
-  WeeklyTest,
   mockAdminTests,
   mockChats,
-  mockDiagnosticResult,
   mockFriends,
   mockUsers,
-  mockWeeklyTests,
 } from "@/data/mockData";
 
 interface AppState {
@@ -53,10 +56,11 @@ interface AppState {
   language: Language;
   setLanguage: (lang: Language) => void;
 
-  // --- diagnóstico ---
+  // --- diagnóstico (API: /api/v1/diagnostico) ---
   diagnosticCompleted: boolean;
-  diagnosticResult: DiagnosticResult;
-  submitDiagnosticTest: () => void;
+  diagnosticResult: DiagnosticResult | null;
+  loadDiagnostic: () => Promise<void>;
+  submitDiagnosticTest: (answers: Record<string, number>) => Promise<{ ok: boolean; message: string }>;
 
   // --- grupos de estudio ---
   groups: StudyGroupUI[];
@@ -71,9 +75,13 @@ interface AppState {
   leaveGroup: (groupId: string) => Promise<{ ok: boolean; message: string }>;
 
   
-  // --- tests semanales ---
-  weeklyTests: WeeklyTest[];
-  completeWeeklyTest: (testId: string) => void;
+  // --- tests semanales (API: /api/v1/tests) ---
+  weeklyTests: WeeklyTestSummary[];
+  loadWeeklyTests: () => Promise<void>;
+  submitWeeklyTest: (
+    testId: string,
+    answers: Record<string, number>,
+  ) => Promise<{ ok: boolean; message: string; result?: TestResult }>;
 
   // --- chat ---
   friends: typeof mockFriends;
@@ -137,13 +145,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   logout: async () => {
     await api.auth.logout();
-    set({ authUser: null, activeRole: "student", groups: [] });
+    set({ authUser: null, activeRole: "student", groups: [], weeklyTests: [], diagnosticResult: null, diagnosticCompleted: false });
   },
   deleteAccount: async () => {
     try {
       await api.users.deleteMe();
       await api.auth.logout();
-      set({ authUser: null, activeRole: "student", groups: [] });
+      set({ authUser: null, activeRole: "student", groups: [], weeklyTests: [], diagnosticResult: null, diagnosticCompleted: false });
       return { ok: true, message: "Tu cuenta fue eliminada." };
     } catch (error) {
       return { ok: false, message: errorMessage(error) };
@@ -174,8 +182,29 @@ export const useAppStore = create<AppState>((set, get) => ({
   setLanguage: (language) => set({ language }),
 
   diagnosticCompleted: false,
-  diagnosticResult: mockDiagnosticResult,
-  submitDiagnosticTest: () => set({ diagnosticCompleted: true }),
+  diagnosticResult: null,
+  loadDiagnostic: async () => {
+    try {
+      const result = await api.diagnostic.result();
+      set({ diagnosticResult: result, diagnosticCompleted: result !== null });
+    } catch {
+      // Sin conexión: se mantiene lo que había.
+    }
+  },
+  submitDiagnosticTest: async (answers) => {
+    try {
+      const { result, user } = await api.diagnostic.submit(answers);
+      // El servidor asigna el nivel según el resultado; se actualiza el usuario de la sesión.
+      set((s) => ({
+        diagnosticResult: result,
+        diagnosticCompleted: true,
+        authUser: s.authUser ? { ...s.authUser, englishLevel: user.englishLevel } : s.authUser,
+      }));
+      return { ok: true, message: "" };
+    } catch (error) {
+      return { ok: false, message: errorMessage(error) };
+    }
+  },
 
   // --- grupos de estudio (API: /api/v1/grupos) ---
   groups: [],
@@ -191,6 +220,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const group = await api.groups.create({ name, description, level });
       set((s) => ({ groups: [group, ...s.groups.filter((g) => g.id !== group.id)] }));
+      get().loadWeeklyTests();
       return { ok: true, message: "Grupo creado.", group };
     } catch (error) {
       return { ok: false, message: errorMessage(error) };
@@ -200,6 +230,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const group = await api.groups.joinByCode(code);
       set((s) => ({ groups: upsertGroup(s.groups, group) }));
+      get().loadWeeklyTests();
       return { ok: true, message: `Te uniste a ${group.name}.` };
     } catch (error) {
       return { ok: false, message: errorMessage(error) };
@@ -209,6 +240,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const group = await api.groups.join(groupId);
       set((s) => ({ groups: upsertGroup(s.groups, group) }));
+      get().loadWeeklyTests();
       return { ok: true, message: `Te uniste a ${group.name}.` };
     } catch (error) {
       return { ok: false, message: errorMessage(error) };
@@ -218,17 +250,30 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       await api.groups.leave(groupId);
       await get().loadGroups(); // el servidor puede haber eliminado el grupo si quedó vacío
+      get().loadWeeklyTests();
       return { ok: true, message: "Saliste del grupo." };
     } catch (error) {
       return { ok: false, message: errorMessage(error) };
     }
   },
 
-  weeklyTests: mockWeeklyTests,
-  completeWeeklyTest: (testId) =>
-    set((s) => ({
-      weeklyTests: s.weeklyTests.map((t) => (t.id === testId ? { ...t, status: "completed" } : t)),
-    })),
+  weeklyTests: [],
+  loadWeeklyTests: async () => {
+    try {
+      set({ weeklyTests: await api.tests.list() });
+    } catch {
+      // Sin conexión: se mantiene la lista anterior.
+    }
+  },
+  submitWeeklyTest: async (testId, answers) => {
+    try {
+      const result = await api.tests.submit(testId, answers);
+      await get().loadWeeklyTests();
+      return { ok: true, message: "", result };
+    } catch (error) {
+      return { ok: false, message: errorMessage(error) };
+    }
+  },
 
   friends: mockFriends,
   chats: mockChats,
@@ -263,4 +308,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 }));
 
 // Si el servidor rechaza la sesión y no se puede renovar, se vuelve al login.
-api.setOnSessionExpired(() => useAppStore.setState({ authUser: null, activeRole: "student", groups: [] }));
+api.setOnSessionExpired(() =>
+  useAppStore.setState({ authUser: null, activeRole: "student", groups: [], weeklyTests: [], diagnosticResult: null, diagnosticCompleted: false }),
+);

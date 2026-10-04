@@ -12,7 +12,8 @@ export default function DashboardScreen() {
   const groups = useAppStore((s) => s.groups);
   const weeklyTests = useAppStore((s) => s.weeklyTests);
   const myGroups = groups.filter((g) => g.memberIds.includes(authUser?.id ?? ""));
-  const pendingTests = weeklyTests.filter((t) => myGroups.some((g) => g.id === t.groupId) && t.status === "pending");
+  // La API ya entrega solo los tests de los niveles de mis grupos.
+  const pendingTests = weeklyTests.filter((t) => t.status === "pending");
 
   return (
     <Screen>
