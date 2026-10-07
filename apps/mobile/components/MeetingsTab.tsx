@@ -8,14 +8,16 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { useAppStore } from "@/store/useAppStore";
 import { api, errorMessage } from "@/lib/api";
+import { useT } from "@/lib/useT";
+import { dateLocale, type TKey } from "@/lib/i18n";
 
-const MODES: { value: MeetingMode; label: string }[] = [
-  { value: "presencial", label: "Presencial" },
-  { value: "online", label: "Online" },
+const MODES: { value: MeetingMode; labelKey: TKey }[] = [
+  { value: "presencial", labelKey: "meet.inPerson" },
+  { value: "online", labelKey: "meet.online" },
 ];
 
 export function formatMeetingDate(iso: string): string {
-  return new Date(iso).toLocaleString("es-CL", {
+  return new Date(iso).toLocaleString(dateLocale(), {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -36,6 +38,7 @@ function parseLocalDateTime(date: string, time: string): Date | null {
 // Pestaña "Encuentros" del detalle de grupo: coordinar sesiones de estudio entre integrantes.
 export function MeetingsTab({ groupId }: { groupId: string }) {
   const userId = useAppStore((s) => s.authUser?.id);
+  const t = useT();
   const [meetings, setMeetings] = useState<Meeting[] | null>(null);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
@@ -83,7 +86,7 @@ export function MeetingsTab({ groupId }: { groupId: string }) {
 
   async function handleCreate() {
     const startsAt = parseLocalDateTime(date, time);
-    if (!startsAt) return setFormError("Usa el formato DD-MM-AAAA para la fecha y HH:MM para la hora.");
+    if (!startsAt) return setFormError(t("meet.badFormat"));
     setSaving(true);
     setFormError("");
     try {
@@ -109,7 +112,7 @@ export function MeetingsTab({ groupId }: { groupId: string }) {
 
   return (
     <View className="gap-2.5">
-      <Button label="+ Proponer encuentro" variant="outline" onPress={() => setOpen(true)} fullWidth />
+      <Button label={t("meet.propose")} variant="outline" onPress={() => setOpen(true)} fullWidth />
       {error ? <Text className="text-xs text-red-500">{error}</Text> : null}
 
       {meetings === null ? (
@@ -117,7 +120,7 @@ export function MeetingsTab({ groupId }: { groupId: string }) {
       ) : meetings.length === 0 ? (
         <Card>
           <Text className="text-ink-muted dark:text-ink-mutedDark">
-            No hay encuentros programados. Propón uno para estudiar juntos.
+            {t("meet.empty")}
           </Text>
         </Card>
       ) : (
@@ -125,7 +128,7 @@ export function MeetingsTab({ groupId }: { groupId: string }) {
           <Card key={m.id}>
             <View className="flex-row items-start justify-between mb-1">
               <Text className="flex-1 pr-2 font-semibold text-ink-light dark:text-ink-dark">{m.topic}</Text>
-              <Badge label={m.mode === "online" ? "Online" : "Presencial"} tone={m.mode === "online" ? "navy" : "gold"} />
+              <Badge label={m.mode === "online" ? t("meet.online") : t("meet.inPerson")} tone={m.mode === "online" ? "navy" : "gold"} />
             </View>
             <Text className="text-sm text-ink-light dark:text-ink-dark mb-0.5">
               {formatMeetingDate(m.startsAt)} · {m.durationMinutes} min
@@ -139,13 +142,13 @@ export function MeetingsTab({ groupId }: { groupId: string }) {
             )}
             <Text className="text-xs text-ink-muted dark:text-ink-mutedDark mb-3">
               {m.attendees.length === 0
-                ? "Nadie ha confirmado todavía."
-                : `Asistirán (${m.attendees.length}): ${m.attendees.map((a) => a.name).join(", ")}`}
+                ? t("meet.nobody")
+                : t("meet.attending", { n: m.attendees.length, names: m.attendees.map((a) => a.name).join(", ") })}
             </Text>
             <View className="flex-row gap-2">
               <View className="flex-1">
                 <Button
-                  label="Asistiré"
+                  label={t("meet.yes")}
                   size="sm"
                   variant={m.myResponse === "yes" ? "primary" : "outline"}
                   onPress={() => respond(m.id, "yes")}
@@ -154,7 +157,7 @@ export function MeetingsTab({ groupId }: { groupId: string }) {
               </View>
               <View className="flex-1">
                 <Button
-                  label="No asistiré"
+                  label={t("meet.no")}
                   size="sm"
                   variant={m.myResponse === "no" ? "primary" : "outline"}
                   onPress={() => respond(m.id, "no")}
@@ -164,25 +167,25 @@ export function MeetingsTab({ groupId }: { groupId: string }) {
             </View>
             {m.createdBy === userId && (
               <Pressable onPress={() => cancel(m.id)} className="mt-3 items-center">
-                <Text className="text-xs font-semibold text-red-500">Cancelar encuentro</Text>
+                <Text className="text-xs font-semibold text-red-500">{t("meet.cancel")}</Text>
               </Pressable>
             )}
           </Card>
         ))
       )}
 
-      <Modal visible={open} onClose={() => setOpen(false)} title="Proponer encuentro">
-        <Input label="Tema" placeholder="Ej: Repaso de condicionales" value={topic} onChangeText={setTopic} />
+      <Modal visible={open} onClose={() => setOpen(false)} title={t("meet.proposeTitle")}>
+        <Input label={t("meet.topic")} placeholder={t("meet.topicPlaceholder")} value={topic} onChangeText={setTopic} />
         <View className="flex-row gap-3">
           <View className="flex-1">
-            <Input label="Fecha" placeholder="DD-MM-AAAA" value={date} onChangeText={setDate} keyboardType="numbers-and-punctuation" />
+            <Input label={t("meet.date")} placeholder={t("meet.datePlaceholder")} value={date} onChangeText={setDate} keyboardType="numbers-and-punctuation" />
           </View>
           <View className="flex-1">
-            <Input label="Hora" placeholder="HH:MM" value={time} onChangeText={setTime} keyboardType="numbers-and-punctuation" />
+            <Input label={t("meet.time")} placeholder="HH:MM" value={time} onChangeText={setTime} keyboardType="numbers-and-punctuation" />
           </View>
         </View>
-        <Input label="Duración (minutos)" value={duration} onChangeText={setDuration} keyboardType="number-pad" />
-        <Text className="mb-1.5 text-sm font-medium text-ink-muted dark:text-ink-mutedDark">Modalidad</Text>
+        <Input label={t("meet.duration")} value={duration} onChangeText={setDuration} keyboardType="number-pad" />
+        <Text className="mb-1.5 text-sm font-medium text-ink-muted dark:text-ink-mutedDark">{t("meet.mode")}</Text>
         <View className="flex-row rounded-full bg-navy-50 dark:bg-navy-800 p-1 mb-4">
           {MODES.map((opt) => (
             <Pressable
@@ -191,21 +194,21 @@ export function MeetingsTab({ groupId }: { groupId: string }) {
               className={`flex-1 rounded-full py-2 items-center ${mode === opt.value ? "bg-white dark:bg-navy-700" : ""}`}
             >
               <Text className={`font-semibold ${mode === opt.value ? "text-navy-700 dark:text-gold-500" : "text-ink-muted dark:text-ink-mutedDark"}`}>
-                {opt.label}
+                {t(opt.labelKey)}
               </Text>
             </Pressable>
           ))}
         </View>
         <Input
-          label={mode === "online" ? "Enlace de la reunión" : "Lugar"}
-          placeholder={mode === "online" ? "https://meet.google.com/..." : "Ej: Biblioteca, sede San Joaquín"}
+          label={mode === "online" ? t("meet.link") : t("meet.place")}
+          placeholder={mode === "online" ? "https://meet.google.com/..." : t("meet.placePlaceholder")}
           autoCapitalize={mode === "online" ? "none" : "sentences"}
           value={location}
           onChangeText={setLocation}
         />
         {formError ? <Text className="text-xs text-red-500 mb-2">{formError}</Text> : null}
         <Button
-          label="Proponer encuentro"
+          label={t("meet.proposeTitle")}
           onPress={handleCreate}
           loading={saving}
           disabled={!topic.trim() || !date.trim() || !time.trim() || !location.trim()}

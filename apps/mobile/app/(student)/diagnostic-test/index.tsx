@@ -8,9 +8,12 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/store/useAppStore";
 import { api, errorMessage } from "@/lib/api";
+import { useT } from "@/lib/useT";
+import { competencyName } from "@/lib/i18n";
 
 export default function DiagnosticTestScreen() {
   const submitDiagnosticTest = useAppStore((s) => s.submitDiagnosticTest);
+  const t = useT();
   const diagnosticCompleted = useAppStore((s) => s.diagnosticCompleted);
   const [test, setTest] = useState<DiagnosticTest | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -32,9 +35,9 @@ export default function DiagnosticTestScreen() {
     return (
       <Screen>
         <Card>
-          <Text className="text-lg font-bold text-ink-light dark:text-ink-dark mb-2">Ya rendiste tu evaluación diagnóstica</Text>
-          <Text className="text-ink-muted dark:text-ink-mutedDark mb-4">Puedes revisar tus resultados cuando quieras.</Text>
-          <Button label="Ver resultados" onPress={() => router.push("/(student)/diagnostic-test/result")} />
+          <Text className="text-lg font-bold text-ink-light dark:text-ink-dark mb-2">{t("diag.doneTitle")}</Text>
+          <Text className="text-ink-muted dark:text-ink-mutedDark mb-4">{t("diag.doneBody")}</Text>
+          <Button label={t("diag.viewResults")} onPress={() => router.push("/(student)/diagnostic-test/result")} />
         </Card>
       </Screen>
     );
@@ -76,7 +79,7 @@ export default function DiagnosticTestScreen() {
   return (
     <Screen>
       <View className="flex-row items-center justify-between mb-2">
-        <Badge label={question.skill === "reading" ? "Lectura" : "Escritura"} tone="gold" />
+        <Badge label={question.skill === "reading" ? t("common.reading") : t("common.writing")} tone="gold" />
         <Text className="text-ink-muted dark:text-ink-mutedDark text-sm">
           {step + 1} / {questions.length}
         </Text>
@@ -86,7 +89,7 @@ export default function DiagnosticTestScreen() {
       </View>
 
       <Card className="mb-5">
-        <Text className="text-xs text-ink-muted dark:text-ink-mutedDark mb-1">{question.competency}</Text>
+        <Text className="text-xs text-ink-muted dark:text-ink-mutedDark mb-1">{competencyName(question.competency)}</Text>
         <Text className="text-lg font-semibold text-ink-light dark:text-ink-dark leading-6">{question.prompt}</Text>
       </Card>
 
@@ -109,10 +112,10 @@ export default function DiagnosticTestScreen() {
 
       {submitError ? <Text className="text-xs text-red-500 mb-2">{submitError}</Text> : null}
       <View className="flex-row gap-3">
-        {step > 0 && <Button label="Anterior" variant="outline" onPress={() => setStep((s) => s - 1)} />}
+        {step > 0 && <Button label={t("common.previous")} variant="outline" onPress={() => setStep((s) => s - 1)} />}
         <View className="flex-1">
           <Button
-            label={isLast ? "Finalizar evaluación" : "Siguiente"}
+            label={isLast ? t("diag.finish") : t("common.next")}
             onPress={handleNext}
             loading={submitting}
             disabled={answers[question.id] === undefined}

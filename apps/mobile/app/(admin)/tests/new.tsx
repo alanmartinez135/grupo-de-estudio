@@ -12,6 +12,8 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { api, errorMessage } from "@/lib/api";
+import { useT } from "@/lib/useT";
+import { competencyName, translateServerMessage } from "@/lib/i18n";
 
 // Competencias que usa el contenido actual; el resultado de cada test se agrupa por ellas.
 const COMPETENCIES = ["Vocabulario", "Comprensión lectora", "Gramática", "Conectores"] as const;
@@ -63,6 +65,7 @@ function Segmented<T extends string>({
 // Crea un test semanal de selección múltiple. Se guarda como borrador y se publica desde el listado.
 export default function NewAdminTestScreen() {
   const [title, setTitle] = useState("");
+  const t = useT();
   const [skill, setSkill] = useState<Skill>("reading");
   const [level, setLevel] = useState<EnglishLevel>("B1");
   const [questions, setQuestions] = useState<QuestionDraft[]>([emptyQuestion()]);
@@ -100,8 +103,8 @@ export default function NewAdminTestScreen() {
     });
     if (!parsed.success) {
       const issue = parsed.error.issues[0]!;
-      const n = issue.path[0] === "questions" && typeof issue.path[1] === "number" ? `Pregunta ${issue.path[1] + 1}: ` : "";
-      setError(issue.path.at(-1) === "correctIndex" ? `${n}marca cuál es la alternativa correcta.` : `${n}${issue.message}`);
+      const n = issue.path[0] === "questions" && typeof issue.path[1] === "number" ? t("newTest.questionPrefix", { n: issue.path[1] + 1 }) : "";
+      setError(issue.path.at(-1) === "correctIndex" ? `${n}${t("newTest.markCorrectError")}` : `${n}${translateServerMessage(issue.message)}`);
       return;
     }
     setSaving(true);
@@ -118,46 +121,46 @@ export default function NewAdminTestScreen() {
 
   return (
     <Screen>
-      <Text className="text-2xl font-bold text-ink-light dark:text-ink-dark mb-1">Crear test semanal</Text>
+      <Text className="text-2xl font-bold text-ink-light dark:text-ink-dark mb-1">{t("newTest.title")}</Text>
       <Text className="text-ink-muted dark:text-ink-mutedDark mb-5">
-        Se guarda como borrador. Al publicarlo, lo verán los grupos del nivel elegido durante una semana.
+        {t("newTest.subtitle")}
       </Text>
 
       <Card className="mb-4">
-        <Input label="Título" placeholder="Ej: Phrasal Verbs básicos" value={title} onChangeText={setTitle} maxLength={80} />
+        <Input label={t("newTest.name")} placeholder={t("newTest.namePlaceholder")} value={title} onChangeText={setTitle} maxLength={80} />
 
-        <Text className="text-sm font-medium text-ink-muted dark:text-ink-mutedDark mb-1.5">Habilidad evaluada</Text>
+        <Text className="text-sm font-medium text-ink-muted dark:text-ink-mutedDark mb-1.5">{t("newTest.skill")}</Text>
         <Segmented
           values={["reading", "writing"] as const}
           value={skill}
           onChange={setSkill}
-          label={(s) => (s === "reading" ? "Lectura (Reading)" : "Escritura (Writing)")}
+          label={(s) => (s === "reading" ? t("newTest.reading") : t("newTest.writing"))}
         />
 
-        <Text className="text-sm font-medium text-ink-muted dark:text-ink-mutedDark mb-1.5">Nivel</Text>
+        <Text className="text-sm font-medium text-ink-muted dark:text-ink-mutedDark mb-1.5">{t("newTest.level")}</Text>
         <Segmented values={EnglishLevelSchema.options} value={level} onChange={setLevel} label={(l) => l} />
       </Card>
 
       {questions.map((q, qi) => (
         <Card key={qi} className="mb-4">
           <View className="flex-row justify-between items-center mb-3">
-            <Text className="font-bold text-ink-light dark:text-ink-dark">Pregunta {qi + 1}</Text>
+            <Text className="font-bold text-ink-light dark:text-ink-dark">{t("newTest.question", { n: qi + 1 })}</Text>
             {questions.length > 1 && (
               <Pressable onPress={() => setQuestions((qs) => qs.filter((_, i) => i !== qi))}>
-                <Text className="text-red-600 text-sm font-semibold">Quitar</Text>
+                <Text className="text-red-600 text-sm font-semibold">{t("newTest.remove")}</Text>
               </Pressable>
             )}
           </View>
 
           <Input
-            label="Enunciado"
-            placeholder="Ej: Choose the correct option: She ___ to class every day."
+            label={t("newTest.prompt")}
+            placeholder={t("newTest.promptPlaceholder")}
             value={q.prompt}
             onChangeText={(v) => updateQuestion(qi, { prompt: v })}
             multiline
           />
 
-          <Text className="text-sm font-medium text-ink-muted dark:text-ink-mutedDark mb-1.5">Competencia</Text>
+          <Text className="text-sm font-medium text-ink-muted dark:text-ink-mutedDark mb-1.5">{t("newTest.competency")}</Text>
           <View className="flex-row flex-wrap gap-2 mb-4">
             {COMPETENCIES.map((c) => (
               <Pressable
@@ -165,13 +168,13 @@ export default function NewAdminTestScreen() {
                 onPress={() => updateQuestion(qi, { competency: c })}
                 className={`px-3 py-1.5 rounded-full ${q.competency === c ? "bg-navy-700" : "bg-navy-50 dark:bg-navy-800"}`}
               >
-                <Text className={`text-sm ${q.competency === c ? "text-white font-semibold" : "text-ink-muted dark:text-ink-mutedDark"}`}>{c}</Text>
+                <Text className={`text-sm ${q.competency === c ? "text-white font-semibold" : "text-ink-muted dark:text-ink-mutedDark"}`}>{competencyName(c)}</Text>
               </Pressable>
             ))}
           </View>
 
           <Text className="text-sm font-medium text-ink-muted dark:text-ink-mutedDark mb-1.5">
-            Alternativas (toca el círculo de la correcta)
+            {t("newTest.options")}
           </Text>
           {q.options.map((option, oi) => {
             const correct = q.correctIndex === oi;
@@ -179,7 +182,7 @@ export default function NewAdminTestScreen() {
               <View key={oi} className="flex-row items-center gap-2 mb-2">
                 <Pressable
                   onPress={() => updateQuestion(qi, { correctIndex: oi })}
-                  accessibilityLabel={`Marcar alternativa ${oi + 1} como correcta`}
+                  accessibilityLabel={t("newTest.markCorrect", { n: oi + 1 })}
                   className={`w-7 h-7 rounded-full border-2 items-center justify-center ${
                     correct ? "border-emerald-600 bg-emerald-600" : "border-navy-200 dark:border-navy-600"
                   }`}
@@ -189,7 +192,7 @@ export default function NewAdminTestScreen() {
                 <View className="flex-1 -mb-4">
                   <Input
                     label=""
-                    placeholder={`Alternativa ${oi + 1}`}
+                    placeholder={t("newTest.option", { n: oi + 1 })}
                     value={option}
                     onChangeText={(v) => updateOption(qi, oi, v)}
                   />
@@ -205,7 +208,7 @@ export default function NewAdminTestScreen() {
           {q.options.length < MAX_OPTIONS && (
             <View className="items-start mt-2">
               <Button
-                label="+ Alternativa"
+                label={t("newTest.addOption")}
                 size="sm"
                 variant="ghost"
                 onPress={() => updateQuestion(qi, { options: [...q.options, ""] })}
@@ -216,11 +219,11 @@ export default function NewAdminTestScreen() {
       ))}
 
       <View className="mb-4">
-        <Button label="+ Agregar pregunta" variant="outline" onPress={() => setQuestions((qs) => [...qs, emptyQuestion()])} />
+        <Button label={t("newTest.addQuestion")} variant="outline" onPress={() => setQuestions((qs) => [...qs, emptyQuestion()])} />
       </View>
 
       {error ? <Text className="text-red-600 text-sm mb-3">{error}</Text> : null}
-      <Button label="Guardar como borrador" fullWidth loading={saving} onPress={handleCreate} />
+      <Button label={t("newTest.save")} fullWidth loading={saving} onPress={handleCreate} />
     </Screen>
   );
 }

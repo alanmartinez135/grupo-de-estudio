@@ -2,9 +2,11 @@ import { Pressable, Text, View } from "react-native";
 import { router, usePathname } from "expo-router";
 import { useAppStore } from "@/store/useAppStore";
 import { Avatar } from "@/components/ui/Avatar";
+import { useT } from "@/lib/useT";
+import type { TKey } from "@/lib/i18n";
 
 interface NavItem {
-  label: string;
+  labelKey: TKey;
   href: string;
 }
 
@@ -13,6 +15,7 @@ export function AppHeader({ navItems }: { navItems: NavItem[] }) {
   const authUser = useAppStore((s) => s.authUser);
   const theme = useAppStore((s) => s.theme);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
+  const t = useT();
 
   return (
     <View className="bg-navy-700 px-5 pt-3 pb-3">
@@ -21,7 +24,7 @@ export function AppHeader({ navItems }: { navItems: NavItem[] }) {
           <View className="w-9 h-9 rounded-full bg-gold-500 items-center justify-center">
             <Text className="text-navy-800 font-extrabold text-sm">DU</Text>
           </View>
-          <Text className="text-white font-bold text-base">Grupo de Estudio</Text>
+          <Text className="text-white font-bold text-base">{t("app.name")}</Text>
         </View>
         <View className="flex-row items-center gap-3">
           <Pressable
@@ -47,7 +50,7 @@ export function AppHeader({ navItems }: { navItems: NavItem[] }) {
               onPress={() => router.push(item.href as any)}
               className={`px-4 py-2 rounded-full ${active ? "bg-gold-500" : "bg-navy-600"}`}
             >
-              <Text className={`text-sm font-semibold ${active ? "text-navy-800" : "text-white"}`}>{item.label}</Text>
+              <Text className={`text-sm font-semibold ${active ? "text-navy-800" : "text-white"}`}>{t(item.labelKey)}</Text>
             </Pressable>
           );
         })}
