@@ -10,7 +10,6 @@ const navItems: { labelKey: TKey; href: string }[] = [
   { labelKey: "nav.dashboard", href: "/(student)/dashboard" },
   { labelKey: "nav.diagnostic", href: "/(student)/diagnostic-test" },
   { labelKey: "nav.groups", href: "/(student)/groups" },
-  { labelKey: "nav.community", href: "/(student)/chat" },
   { labelKey: "nav.settings", href: "/(student)/settings" },
 ];
 

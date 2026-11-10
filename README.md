@@ -2,7 +2,7 @@
 
 Aplicación multiplataforma (móvil y web) para apoyar el aprendizaje del inglés entre estudiantes de Duoc UC. Permite conocer el nivel de inglés mediante una evaluación diagnóstica, formar grupos de estudio por nivel, resolver tests semanales y coordinar encuentros de estudio. Proyecto APT (Capstone).
 
-Estado: MVP terminado (Fase 2). La app está conectada a una API propia con PostgreSQL y todo el sistema se ejecuta en local con Docker Compose. El chat y la recuperación de contraseña por correo quedan como trabajo futuro.
+Estado: MVP terminado y cerrado en la Fase 3. La app está conectada a una API propia con PostgreSQL y todo el sistema se ejecuta en local con Docker Compose. En la Fase 3 se retiró de la app la sección Comunidad (chat), que solo tenía datos simulados; el chat y la recuperación de contraseña por correo quedan como trabajo futuro.
 
 ## Contenido
 
@@ -26,7 +26,6 @@ Estado: MVP terminado (Fase 2). La app está conectada a una API propia con Post
 - Grupos de estudio (máximo 6 integrantes): crear, unirse desde el listado o con código de invitación, ver integrantes y abandonar.
 - Tests semanales según el nivel de sus grupos.
 - Encuentros de estudio: proponer (presencial u online), confirmar asistencia y ver los próximos en el inicio.
-- Comunidad: lista de contactos y chat (interfaz con datos simulados; trabajo futuro).
 - Ajustes: modo claro/oscuro, idioma (Español/English), cerrar sesión y eliminar cuenta.
 
 **Administrador**
@@ -112,7 +111,7 @@ apps/mobile/
 ├── app/                  # Pantallas y rutas (Expo Router)
 │   ├── _layout.tsx       # Layout raíz: fuentes, tema y restauración de la sesión
 │   ├── (auth)/           # login, register, forgot-password, reset-password
-│   ├── (student)/        # dashboard, diagnostic-test, groups, weekly-tests, chat, settings
+│   ├── (student)/        # dashboard, diagnostic-test, groups, weekly-tests, settings
 │   └── (admin)/          # users, tests (listado y creación)
 ├── components/
 │   ├── ui/               # Componentes base: Button, Card, Input, Modal, Badge, Avatar, ProgressBar, Screen
@@ -121,7 +120,7 @@ apps/mobile/
 │   ├── MeetingsTab.tsx   # Encuentros del grupo: proponer y confirmar asistencia
 │   └── RoleSwitcher.tsx  # Botón del administrador para alternar con la vista de alumno
 ├── store/useAppStore.ts  # Estado global (Zustand)
-├── data/mockData.ts      # Datos ficticios del chat, contactos y recuperación de contraseña (trabajo futuro)
+├── data/mockData.ts      # Tipos del prototipo y datos ficticios de la recuperación de contraseña (trabajo futuro)
 ├── lib/api.ts            # Cliente de API configurado con EXPO_PUBLIC_API_URL
 ├── lib/session.ts        # Guarda los tokens (secure-store en móvil, memoria en web)
 ├── lib/i18n.ts           # Textos Español/English
@@ -145,8 +144,6 @@ Las carpetas entre paréntesis son *grupos de rutas*: organizan las pantallas po
 | `(student)` | `/groups`                     | Listado de grupos                         |
 | `(student)` | `/groups/[groupId]`           | Detalle de grupo                          |
 | `(student)` | `/weekly-tests/[testId]`      | Test semanal                              |
-| `(student)` | `/chat`                       | Comunidad                                 |
-| `(student)` | `/chat/[friendId]`            | Conversación                              |
 | `(student)` | `/settings`                   | Ajustes                                   |
 | `(admin)`   | `/users`                      | Gestión de usuarios                       |
 | `(admin)`   | `/tests`                      | Listado de evaluaciones                   |
@@ -160,7 +157,7 @@ Las carpetas entre paréntesis son *grupos de rutas*: organizan las pantallas po
 
 ### Estado y datos
 
-El estado compartido (sesión, grupos, diagnóstico, tests) vive en `store/useAppStore.ts` y se carga desde la API. Las acciones que pueden fallar devuelven `{ ok, message }` con el mensaje del servidor. Las pantallas de administración consultan la API directamente. Solo la comunidad (chat y contactos) y la recuperación de contraseña siguen usando datos de `data/mockData.ts`.
+El estado compartido (sesión, grupos, diagnóstico, tests) vive en `store/useAppStore.ts` y se carga desde la API. Las acciones que pueden fallar devuelven `{ ok, message }` con el mensaje del servidor. Las pantallas de administración consultan la API directamente. Solo la recuperación de contraseña sigue usando datos de `data/mockData.ts`.
 
 ## Backend y comunicación cliente-servidor
 
@@ -266,7 +263,7 @@ La escala de puntaje a nivel (0–29 % A1, 30–49 % A2, 50–69 % B1, 70–84 %
 
 ### Conexión de la app con la API
 
-`packages/api` es el cliente HTTP que usa la app: adjunta el token, lo renueva cuando vence y entrega los errores con su mensaje. Hoy están conectados el **registro, el inicio de sesión, el cierre de sesión, la eliminación de cuenta, los grupos de estudio, la evaluación diagnóstica, los tests semanales, la coordinación de encuentros y el panel de administración**; la comunidad (chat) sigue con datos simulados.
+`packages/api` es el cliente HTTP que usa la app: adjunta el token, lo renueva cuando vence y entrega los errores con su mensaje. Hoy están conectados el **registro, el inicio de sesión, el cierre de sesión, la eliminación de cuenta, los grupos de estudio, la evaluación diagnóstica, los tests semanales, la coordinación de encuentros y el panel de administración**.
 
 ```sh
 copy apps\mobile\.env.example apps\mobile\.env   # Windows (en macOS/Linux: cp)
@@ -285,8 +282,8 @@ Trabajo futuro: chat entre estudiantes, recuperación de contraseña por correo,
 
 ## Estado del proyecto
 
-- Hecho: interfaz de 16 pantallas; API Fastify con PostgreSQL; autenticación con JWT y Argon2id; grupos, diagnóstico, tests semanales, encuentros y administración conectados; pruebas automatizadas (Vitest) y de carga (k6); ejecución completa con Docker Compose.
-- Pendiente: chat, recuperación de contraseña por correo y traducción completa del idioma.
+- Hecho: interfaz de 14 pantallas; API Fastify con PostgreSQL; autenticación con JWT y Argon2id; grupos, diagnóstico, tests semanales, encuentros y administración conectados; pruebas automatizadas (Vitest) y de carga (k6); ejecución completa con Docker Compose.
+- Pendiente (trabajo futuro): chat entre estudiantes (retirado de la app en la Fase 3), recuperación de contraseña por correo y traducción completa del idioma.
 
 ## Equipo
 

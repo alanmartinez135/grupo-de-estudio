@@ -12,15 +12,11 @@ import { setCurrentLanguage, tr } from "@/lib/i18n";
 import { loadPreferences, savePreferences } from "@/lib/preferences";
 
 import {
-  ChatMessage,
-  CURRENT_USER_ID,
   Language,
   MockUser,
   Role,
   StudyGroupUI,
   Theme,
-  mockChats,
-  mockFriends,
   mockUsers,
 } from "@/data/mockData";
 
@@ -83,12 +79,6 @@ interface AppState {
     testId: string,
     answers: Record<string, number>,
   ) => Promise<{ ok: boolean; message: string; result?: TestResult }>;
-
-  // --- chat ---
-  friends: typeof mockFriends;
-  chats: Record<string, ChatMessage[]>;
-  sendMessage: (friendId: string, text: string) => void;
-  addFriend: (name: string) => void;
 
   // La gestión de usuarios y evaluaciones del administrador usa el API directamente
   // desde sus pantallas (app/(admin)); no necesita estado global.
@@ -284,30 +274,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { ok: false, message: errorMessage(error) };
     }
   },
-
-  friends: mockFriends,
-  chats: mockChats,
-  sendMessage: (friendId, text) => {
-    if (!text.trim()) return;
-    const msg: ChatMessage = {
-      id: `m-${Date.now()}`,
-      senderId: get().authUser?.id ?? CURRENT_USER_ID,
-      text,
-      sentAt: new Date().toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }),
-    };
-    set((s) => ({ chats: { ...s.chats, [friendId]: [...(s.chats[friendId] ?? []), msg] } }));
-  },
-  addFriend: (name) => {
-    const newFriend = {
-      id: `f-${Date.now()}`,
-      name,
-      career: "Desarrollo de Software",
-      online: false,
-      avatarColor: "#0F3A63",
-    };
-    set((s) => ({ friends: [...s.friends, newFriend] }));
-  },
-
 }));
 
 // Si el servidor rechaza la sesión y no se puede renovar, se vuelve al login.
