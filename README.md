@@ -279,6 +279,7 @@ Trabajo futuro: chat entre estudiantes, recuperación de contraseña por correo,
 
 - `docs/diagramas/`: [modelo entidad-relación](docs/diagramas/modelo-er.md) y [diagrama de componentes v2](docs/diagramas/componentes.md), en Mermaid (GitHub los dibuja al abrirlos), más su versión en imagen `.png`.
 - Anexo técnico, plan de pruebas, Product Vision, Definition of Done y manual técnico: repositorio de documentación del equipo ([alanmartinez135/capstone](https://github.com/alanmartinez135/capstone)), carpeta Fase 2.
+- Fase 3: presentación final, encuesta a 14 docentes de inglés de la sede San Joaquín y la coordinadora de Inglés (con su resumen) y mockups actualizados sin el chat, en la carpeta Fase 3 del mismo repositorio.
 
 ## Estado del proyecto
 
