@@ -33,22 +33,6 @@ export interface StudyGroupUI {
   members?: { id: string; name: string; career: string }[];
 }
 
-export interface ChatMessage {
-  id: string;
-  senderId: string;
-  text: string;
-  sentAt: string;
-}
-
-export interface Friend {
-  id: string;
-  name: string;
-  career: string;
-  online: boolean;
-  avatarColor: string;
-}
-
-export const CURRENT_USER_ID = "u-1";
 export const MAX_GROUP_MEMBERS = 6;
 
 export const mockUsers: MockUser[] = [
@@ -58,20 +42,3 @@ export const mockUsers: MockUser[] = [
   { id: "u-4", correo: "eduardo.guzman@duocuc.cl", password: "duoc2024", name: "Eduardo Guzmán", career: "Desarrollo de Software", jornada: "diurna", englishLevel: "B1", role: "student", avatarColor: "#5B6B85" },
   { id: "u-5", correo: "admin@duocuc.cl", password: "admin2024", name: "Consuelo Prieto", career: "Coordinación Académica", jornada: "diurna", englishLevel: "C1", role: "admin", avatarColor: "#0F3A63" },
 ];
-
-export const mockFriends: Friend[] = [
-  { id: "u-2", name: "Sebastián Navarro", career: "Desarrollo de Software", online: true, avatarColor: "#2E5B8A" },
-  { id: "u-3", name: "Victoria Roa", career: "Administración de Redes", online: false, avatarColor: "#E6AD10" },
-  { id: "u-4", name: "Eduardo Guzmán", career: "Desarrollo de Software", online: true, avatarColor: "#5B6B85" },
-];
-
-export const mockChats: Record<string, ChatMessage[]> = {
-  "u-2": [
-    { id: "m-1", senderId: "u-2", text: "¿Vamos a repasar el test semanal antes del viernes?", sentAt: "09:12" },
-    { id: "m-2", senderId: CURRENT_USER_ID, text: "Sí, ¿a las 18:00 te acomoda?", sentAt: "09:14" },
-    { id: "m-3", senderId: "u-2", text: "Perfecto, nos vemos en el grupo de estudio.", sentAt: "09:15" },
-  ],
-  "u-4": [
-    { id: "m-4", senderId: "u-4", text: "Subí el resumen de reading comprehension al grupo.", sentAt: "ayer" },
-  ],
-};

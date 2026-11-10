@@ -11,7 +11,6 @@ const es = {
   "nav.dashboard": "Inicio",
   "nav.diagnostic": "Evaluación diagnóstica",
   "nav.groups": "Grupos",
-  "nav.community": "Comunidad",
   "nav.settings": "Ajustes",
   "nav.users": "Usuarios",
   "nav.tests": "Evaluaciones",
@@ -189,17 +188,6 @@ const es = {
   "meet.placePlaceholder": "Ej: Biblioteca, sede San Joaquín",
   "meet.badFormat": "Usa el formato DD-MM-AAAA para la fecha y HH:MM para la hora.",
 
-  // Comunidad (datos simulados)
-  "chat.title": "Comunidad",
-  "chat.search": "Buscar personas",
-  "chat.searchPlaceholder": "Buscar por nombre...",
-  "chat.noResults": "Sin resultados para \"{query}\"",
-  "chat.add": "+ Agregar",
-  "chat.friends": "MIS AMIGOS",
-  "chat.online": "En línea",
-  "chat.offline": "Desconectado",
-  "chat.placeholder": "Escribe un mensaje...",
-
   // Ajustes
   "settings.title": "Ajustes",
   "settings.changePhoto": "Cambiar foto de perfil",
@@ -271,7 +259,6 @@ const en: Record<TKey, string> = {
   "nav.dashboard": "Home",
   "nav.diagnostic": "Diagnostic test",
   "nav.groups": "Groups",
-  "nav.community": "Community",
   "nav.settings": "Settings",
   "nav.users": "Users",
   "nav.tests": "Tests",
@@ -439,16 +426,6 @@ const en: Record<TKey, string> = {
   "meet.place": "Place",
   "meet.placePlaceholder": "e.g. Library, San Joaquín campus",
   "meet.badFormat": "Use DD-MM-YYYY for the date and HH:MM for the time.",
-
-  "chat.title": "Community",
-  "chat.search": "Find people",
-  "chat.searchPlaceholder": "Search by name...",
-  "chat.noResults": "No results for \"{query}\"",
-  "chat.add": "+ Add",
-  "chat.friends": "MY FRIENDS",
-  "chat.online": "Online",
-  "chat.offline": "Offline",
-  "chat.placeholder": "Type a message...",
 
   "settings.title": "Settings",
   "settings.changePhoto": "Change profile picture",

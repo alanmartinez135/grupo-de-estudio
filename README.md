@@ -26,7 +26,6 @@ Estado: MVP terminado (Fase 2). La app está conectada a una API propia con Post
 - Grupos de estudio (máximo 6 integrantes): crear, unirse desde el listado o con código de invitación, ver integrantes y abandonar.
 - Tests semanales según el nivel de sus grupos.
 - Encuentros de estudio: proponer (presencial u online), confirmar asistencia y ver los próximos en el inicio.
-- Comunidad: lista de contactos y chat (interfaz con datos simulados; trabajo futuro).
 - Ajustes: modo claro/oscuro, idioma (Español/English), cerrar sesión y eliminar cuenta.
 
 **Administrador**
@@ -145,7 +144,6 @@ Las carpetas entre paréntesis son *grupos de rutas*: organizan las pantallas po
 | `(student)` | `/groups`                     | Listado de grupos                         |
 | `(student)` | `/groups/[groupId]`           | Detalle de grupo                          |
 | `(student)` | `/weekly-tests/[testId]`      | Test semanal                              |
-| `(student)` | `/chat`                       | Comunidad                                 |
 | `(student)` | `/chat/[friendId]`            | Conversación                              |
 | `(student)` | `/settings`                   | Ajustes                                   |
 | `(admin)`   | `/users`                      | Gestión de usuarios                       |
@@ -160,7 +158,7 @@ Las carpetas entre paréntesis son *grupos de rutas*: organizan las pantallas po
 
 ### Estado y datos
 
-El estado compartido (sesión, grupos, diagnóstico, tests) vive en `store/useAppStore.ts` y se carga desde la API. Las acciones que pueden fallar devuelven `{ ok, message }` con el mensaje del servidor. Las pantallas de administración consultan la API directamente. Solo la comunidad (chat y contactos) y la recuperación de contraseña siguen usando datos de `data/mockData.ts`.
+El estado compartido (sesión, grupos, diagnóstico, tests) vive en `store/useAppStore.ts` y se carga desde la API. Las acciones que pueden fallar devuelven `{ ok, message }` con el mensaje del servidor. Las pantallas de administración consultan la API directamente. La recuperación de contraseña siguen usando datos de `data/mockData.ts`.
 
 ## Backend y comunicación cliente-servidor
 
@@ -266,7 +264,7 @@ La escala de puntaje a nivel (0–29 % A1, 30–49 % A2, 50–69 % B1, 70–84 %
 
 ### Conexión de la app con la API
 
-`packages/api` es el cliente HTTP que usa la app: adjunta el token, lo renueva cuando vence y entrega los errores con su mensaje. Hoy están conectados el **registro, el inicio de sesión, el cierre de sesión, la eliminación de cuenta, los grupos de estudio, la evaluación diagnóstica, los tests semanales, la coordinación de encuentros y el panel de administración**; la comunidad (chat) sigue con datos simulados.
+`packages/api` es el cliente HTTP que usa la app: adjunta el token, lo renueva cuando vence y entrega los errores con su mensaje. Hoy están conectados el **registro, el inicio de sesión, el cierre de sesión, la eliminación de cuenta, los grupos de estudio, la evaluación diagnóstica, los tests semanales, la coordinación de encuentros y el panel de administración**.
 
 ```sh
 copy apps\mobile\.env.example apps\mobile\.env   # Windows (en macOS/Linux: cp)
